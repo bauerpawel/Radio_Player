@@ -40,6 +40,9 @@ public partial class MainViewModel : ObservableObject
     private bool _isBuffering;
 
     [ObservableProperty]
+    private bool _canStop;
+
+    [ObservableProperty]
     private float _volume = 0.8f;
 
     [ObservableProperty]
@@ -218,6 +221,16 @@ public partial class MainViewModel : ObservableObject
         {
             _radioPlayer.Volume = value;
         }
+    }
+
+    partial void OnIsPlayingChanged(bool value)
+    {
+        CanStop = IsPlaying || IsBuffering;
+    }
+
+    partial void OnIsBufferingChanged(bool value)
+    {
+        CanStop = IsPlaying || IsBuffering;
     }
 
     [RelayCommand]

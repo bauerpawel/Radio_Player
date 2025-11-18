@@ -250,7 +250,7 @@
 
                         <Button Style="{StaticResource MaterialDesignIconButton}"
                                 Command="{Binding StopStationCommand}"
-                                IsEnabled="{Binding IsPlaying}"
+                                IsEnabled="{Binding CanStop}"
                                 Width="40" Height="40"
                                 Margin="0,0,12,0"
                                 ToolTip="Stop playback">
