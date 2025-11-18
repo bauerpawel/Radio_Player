@@ -47,9 +47,7 @@ public partial class App : Application
         // Register services
         services.AddSingleton<IRadioBrowserService, RadioBrowserService>();
         services.AddSingleton<IRadioStationRepository, RadioStationRepository>();
-
-        // TODO: Register when implementation is ready
-        // services.AddSingleton<IRadioPlayer, NAudioRadioPlayer>();
+        services.AddSingleton<IRadioPlayer, NAudioRadioPlayer>();
 
         // Register ViewModels
         services.AddTransient<MainViewModel>();
