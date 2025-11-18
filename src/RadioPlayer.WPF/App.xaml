@@ -1,8 +1,14 @@
 <Application x:Class="RadioPlayer.WPF.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             StartupUri="Views/MainWindow.xaml">
+             xmlns:converters="clr-namespace:RadioPlayer.WPF.Converters">
     <Application.Resources>
+        <!-- Value Converters -->
+        <converters:NullToBooleanConverter x:Key="NullToBooleanConverter"/>
+        <converters:BoolToBufferingConverter x:Key="BoolToBufferingConverter"/>
+        <converters:VolumeConverter x:Key="VolumeConverter"/>
+        <converters:VolumePercentConverter x:Key="VolumePercentConverter"/>
+
         <!-- Global application resources and styles will go here -->
 
         <!-- Default color scheme -->
