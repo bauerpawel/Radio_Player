@@ -301,6 +301,8 @@ public class NAudioRadioPlayer : IRadioPlayer
                 // Process when we have enough data
                 if (audioDataBuffer.Length >= AppConstants.AudioBuffer.ChunkSize)
                 {
+                    // Reset position to beginning before processing
+                    audioDataBuffer.Position = 0;
                     await ProcessAudioStreamAsync(audioDataBuffer, codec, cancellationToken);
                     audioDataBuffer.SetLength(0);
                     audioDataBuffer.Position = 0;
