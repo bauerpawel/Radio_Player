@@ -18,18 +18,18 @@ public partial class MainWindow : Window
         DataContext = _viewModel;
 
         // Load top stations on startup
-        Loaded += async (s, e) =>
+        Loaded += (s, e) =>
         {
-            await _viewModel.LoadTopStationsAsync();
+            _viewModel.LoadTopStationsCommand.Execute(null);
         };
     }
 
-    private async void StationsList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    private void StationsList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         // Play station on double-click
         if (_viewModel.PlayStationCommand.CanExecute(null))
         {
-            await _viewModel.PlayStationAsync();
+            _viewModel.PlayStationCommand.Execute(null);
         }
     }
 }
