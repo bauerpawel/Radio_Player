@@ -34,6 +34,12 @@ public class NAudioRadioPlayer : IRadioPlayer
     private float _volume = AppConstants.UI.DefaultVolume;
     private bool _isMuted;
 
+    // Data accumulators for OGG/AAC streaming
+    private MemoryStream? _oggAccumulator;
+    private MemoryStream? _aacAccumulator;
+    private const int MinimumOggDataSize = 65536; // 64KB minimum before processing
+    private const int MinimumAacDataSize = 32768; // 32KB minimum before processing
+
     public PlaybackState State
     {
         get => _state;
@@ -156,6 +162,12 @@ public class NAudioRadioPlayer : IRadioPlayer
 
         _bufferedWaveProvider = null;
         _currentStation = null;
+
+        // Clear accumulators
+        _oggAccumulator?.Dispose();
+        _oggAccumulator = null;
+        _aacAccumulator?.Dispose();
+        _aacAccumulator = null;
 
         // Wait for tasks to complete
         try
@@ -316,21 +328,98 @@ public class NAudioRadioPlayer : IRadioPlayer
     {
         try
         {
+            var codecUpper = codec.ToUpperInvariant();
+
             // For MP3, parse frames directly from raw data
-            if (codec.ToUpperInvariant() == "MP3" || codec.ToUpperInvariant() == "MPEG")
+            if (codecUpper == "MP3" || codecUpper == "MPEG")
             {
                 await ProcessMp3RawDataAsync(audioData, cancellationToken);
             }
+            // For OGG, accumulate data before processing
+            else if (codecUpper == "OGG" || codecUpper == "VORBIS")
+            {
+                await ProcessOggAccumulatedDataAsync(audioData, cancellationToken);
+            }
+            // For AAC, accumulate data before processing
+            else if (codecUpper == "AAC" || codecUpper == "MP4" || codecUpper == "AAC+")
+            {
+                await ProcessAacAccumulatedDataAsync(audioData, cancellationToken);
+            }
             else
             {
-                // For AAC/OGG, wrap in MemoryStream and use appropriate reader
-                using var memStream = new MemoryStream(audioData);
-                await ProcessAudioStreamAsync(memStream, codec, cancellationToken);
+                // Unknown codec - try MP3 as fallback
+                await ProcessMp3RawDataAsync(audioData, cancellationToken);
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[RadioPlayer] Raw audio processing error: {ex.Message}");
+        }
+    }
+
+    private async Task ProcessOggAccumulatedDataAsync(byte[] oggData, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Initialize accumulator if needed
+            if (_oggAccumulator == null)
+            {
+                _oggAccumulator = new MemoryStream();
+            }
+
+            // Add new data to accumulator
+            await _oggAccumulator.WriteAsync(oggData, 0, oggData.Length, cancellationToken);
+
+            // Process when we have enough data
+            if (_oggAccumulator.Length >= MinimumOggDataSize)
+            {
+                _oggAccumulator.Position = 0;
+                await ProcessAudioStreamAsync(_oggAccumulator, "OGG", cancellationToken);
+
+                // Clear accumulator for next batch
+                _oggAccumulator.SetLength(0);
+                _oggAccumulator.Position = 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] OGG accumulation error: {ex.Message}");
+            // Reset accumulator on error
+            _oggAccumulator?.Dispose();
+            _oggAccumulator = null;
+        }
+    }
+
+    private async Task ProcessAacAccumulatedDataAsync(byte[] aacData, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Initialize accumulator if needed
+            if (_aacAccumulator == null)
+            {
+                _aacAccumulator = new MemoryStream();
+            }
+
+            // Add new data to accumulator
+            await _aacAccumulator.WriteAsync(aacData, 0, aacData.Length, cancellationToken);
+
+            // Process when we have enough data
+            if (_aacAccumulator.Length >= MinimumAacDataSize)
+            {
+                _aacAccumulator.Position = 0;
+                await ProcessAudioStreamAsync(_aacAccumulator, "AAC", cancellationToken);
+
+                // Clear accumulator for next batch
+                _aacAccumulator.SetLength(0);
+                _aacAccumulator.Position = 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] AAC accumulation error: {ex.Message}");
+            // Reset accumulator on error
+            _aacAccumulator?.Dispose();
+            _aacAccumulator = null;
         }
     }
 
