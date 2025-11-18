@@ -1,4 +1,5 @@
 using System;
+using System.Net.Http;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using RadioPlayer.WPF.Services;
@@ -29,13 +30,18 @@ public partial class App : Application
 
     private void ConfigureServices(IServiceCollection services)
     {
-        // Register services (implementations will be added later)
-        // services.AddSingleton<IRadioBrowserService, RadioBrowserService>();
+        // Register HttpClient for services
+        services.AddSingleton<HttpClient>();
+
+        // Register services
+        services.AddSingleton<IRadioBrowserService, RadioBrowserService>();
+
+        // TODO: Register when implementations are ready
         // services.AddSingleton<IRadioStationRepository, RadioStationRepository>();
         // services.AddSingleton<IRadioPlayer, NAudioRadioPlayer>();
 
         // Register ViewModels
-        // services.AddTransient<MainViewModel>();
+        services.AddTransient<MainViewModel>();
     }
 
     protected override void OnExit(ExitEventArgs e)
