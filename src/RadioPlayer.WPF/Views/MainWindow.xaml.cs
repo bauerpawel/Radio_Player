@@ -32,10 +32,4 @@ public partial class MainWindow : Window
             await _viewModel.PlayStationAsync();
         }
     }
-
-    private void SearchButton_Click(object sender, RoutedEventArgs e)
-    {
-        // Focus search textbox
-        // This is a simple UI helper - actual search is handled by ViewModel
-    }
 }

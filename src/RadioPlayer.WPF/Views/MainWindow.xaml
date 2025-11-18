@@ -3,206 +3,327 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
         Title="Radio Player"
-        Height="600"
-        Width="900"
-        MinHeight="500"
-        MinWidth="700"
-        WindowStartupLocation="CenterScreen">
+        Height="700"
+        Width="1100"
+        MinHeight="600"
+        MinWidth="900"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{DynamicResource MaterialDesignFont}"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        TextElement.FontWeight="Regular"
+        TextElement.FontSize="13"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto">
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Header/Now Playing -->
-            <RowDefinition Height="*"/>     <!-- Main Content -->
-            <RowDefinition Height="Auto"/> <!-- Player Controls -->
-        </Grid.RowDefinitions>
+    <materialDesign:DialogHost Identifier="RootDialog">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- App Bar -->
+                <RowDefinition Height="*"/>     <!-- Main Content -->
+                <RowDefinition Height="Auto"/> <!-- Player Controls -->
+            </Grid.RowDefinitions>
 
-        <!-- Header / Now Playing Section -->
-        <Border Grid.Row="0"
-                Background="{StaticResource PrimaryBrush}"
-                Padding="20">
-            <StackPanel>
-                <TextBlock Text="Radio Player"
-                          FontSize="24"
-                          FontWeight="Bold"
-                          Foreground="White"
-                          Margin="0,0,0,10"/>
-                <TextBlock Text="{Binding NowPlaying, FallbackValue='Select a station to start playing'}"
-                          FontSize="16"
-                          Foreground="White"
-                          Opacity="0.9"/>
-            </StackPanel>
-        </Border>
+            <!-- Material Design App Bar / Header -->
+            <materialDesign:ColorZone Grid.Row="0" Mode="PrimaryDark" Padding="16" materialDesign:ElevationAssist.Elevation="Dp4">
+                <DockPanel>
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                        <materialDesign:PackIcon Kind="Radio" Width="32" Height="32" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Radio Player" FontSize="20" FontWeight="Medium"/>
+                            <TextBlock Text="{Binding NowPlaying, FallbackValue='Select a station to start playing'}"
+                                      FontSize="13" Opacity="0.8" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </StackPanel>
 
-        <!-- Main Content Area -->
-        <Grid Grid.Row="1" Margin="20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="250"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
+                        <Button Style="{StaticResource MaterialDesignIconButton}"
+                                ToolTip="Settings"
+                                Margin="8,0">
+                            <materialDesign:PackIcon Kind="Settings"/>
+                        </Button>
+                        <Button Style="{StaticResource MaterialDesignIconButton}"
+                                ToolTip="About"
+                                Margin="8,0">
+                            <materialDesign:PackIcon Kind="InformationOutline"/>
+                        </Button>
+                    </StackPanel>
+                </DockPanel>
+            </materialDesign:ColorZone>
 
-            <!-- Sidebar Navigation -->
-            <Border Grid.Column="0"
-                    Background="{StaticResource SurfaceBrush}"
-                    CornerRadius="8"
-                    Margin="0,0,10,0"
-                    Padding="15">
-                <StackPanel>
-                    <TextBlock Text="Navigation"
-                              FontSize="14"
-                              FontWeight="Bold"
-                              Margin="0,0,0,15"/>
-
-                    <Button Content="Top Stations"
-                            Command="{Binding LoadTopStationsCommand}"
-                            Margin="0,0,0,10"
-                            HorizontalAlignment="Stretch"
-                            Padding="10"/>
-                    <Button Content="Favorites"
-                            Command="{Binding LoadFavoritesCommand}"
-                            Margin="0,0,0,10"
-                            HorizontalAlignment="Stretch"
-                            Padding="10"/>
-                    <Button Content="Search"
-                            Margin="0,0,0,10"
-                            HorizontalAlignment="Stretch"
-                            Padding="10"
-                            Click="SearchButton_Click"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Station List / Content Area -->
-            <Border Grid.Column="1"
-                    Background="{StaticResource SurfaceBrush}"
-                    CornerRadius="8"
-                    Padding="15">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- Search Bar -->
-                    <Grid Grid.Row="0" Margin="0,0,0,15">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBox Grid.Column="0"
-                                Padding="10"
-                                FontSize="14"
-                                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                VerticalContentAlignment="Center">
-                            <TextBox.InputBindings>
-                                <KeyBinding Key="Enter" Command="{Binding SearchStationsCommand}"/>
-                            </TextBox.InputBindings>
-                        </TextBox>
-
-                        <Button Grid.Column="1"
-                                Content="Search"
-                                Command="{Binding SearchStationsCommand}"
-                                Style="{StaticResource PrimaryButton}"
-                                Margin="10,0,0,0"
-                                Padding="20,10"/>
-                    </Grid>
-
-                    <!-- Stations List -->
-                    <ListView Grid.Row="1"
-                             ItemsSource="{Binding Stations}"
-                             SelectedItem="{Binding SelectedStation}"
-                             Background="White"
-                             BorderThickness="0"
-                             MouseDoubleClick="StationsList_MouseDoubleClick">
-                        <ListView.View>
-                            <GridView>
-                                <GridViewColumn Header="Station Name" Width="250" DisplayMemberBinding="{Binding Name}"/>
-                                <GridViewColumn Header="Country" Width="120" DisplayMemberBinding="{Binding Country}"/>
-                                <GridViewColumn Header="Genre" Width="150" DisplayMemberBinding="{Binding Tags}"/>
-                                <GridViewColumn Header="Codec" Width="80" DisplayMemberBinding="{Binding Codec}"/>
-                                <GridViewColumn Header="Bitrate" Width="80">
-                                    <GridViewColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Bitrate, StringFormat='{}{0} kbps'}"/>
-                                        </DataTemplate>
-                                    </GridViewColumn.CellTemplate>
-                                </GridViewColumn>
-                            </GridView>
-                        </ListView.View>
-                    </ListView>
-                </Grid>
-            </Border>
-        </Grid>
-
-        <!-- Player Controls -->
-        <Border Grid.Row="2"
-                Background="{StaticResource SurfaceBrush}"
-                BorderThickness="0,1,0,0"
-                BorderBrush="#E0E0E0"
-                Padding="20">
-            <Grid>
+            <!-- Main Content Area -->
+            <Grid Grid.Row="1" Margin="16">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="280"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Playback Controls -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <Button Content="▶ Play"
-                            Command="{Binding PlayStationCommand}"
-                            Style="{StaticResource PrimaryButton}"
-                            Margin="0,0,10,0"
-                            Width="100"
-                            IsEnabled="{Binding SelectedStation, Converter={StaticResource NullToBooleanConverter}}"/>
-                    <Button Content="⏹ Stop"
-                            Command="{Binding StopStationCommand}"
-                            Padding="16,8"
-                            Width="100"
-                            IsEnabled="{Binding IsPlaying}"/>
-                    <Button Content="⭐"
-                            Command="{Binding ToggleFavoriteCommand}"
-                            Margin="10,0,0,0"
-                            Padding="16,8"
-                            Width="50"
-                            FontSize="16"
-                            IsEnabled="{Binding SelectedStation, Converter={StaticResource NullToBooleanConverter}}"
-                            ToolTip="Add to Favorites"/>
-                </StackPanel>
+                <!-- Sidebar Navigation -->
+                <materialDesign:Card Grid.Column="0" Margin="0,0,16,0" materialDesign:ElevationAssist.Elevation="Dp2">
+                    <StackPanel Margin="16">
+                        <TextBlock Text="Browse"
+                                  FontSize="14"
+                                  FontWeight="Medium"
+                                  Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                  Margin="0,0,0,12"/>
 
-                <!-- Status Display -->
-                <StackPanel Grid.Column="1"
-                           Orientation="Horizontal"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center">
-                    <TextBlock Text="{Binding StatusMessage, FallbackValue='Ready'}"
-                              FontSize="12"
-                              Foreground="{StaticResource SecondaryTextBrush}"/>
-                    <TextBlock Text="{Binding IsBuffering, Converter={StaticResource BoolToBufferingConverter}}"
-                              FontSize="12"
-                              Foreground="{StaticResource AccentBrush}"
-                              Margin="10,0,0,0"
-                              FontWeight="Bold"/>
-                </StackPanel>
+                        <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                                Command="{Binding LoadTopStationsCommand}"
+                                Margin="0,0,0,8"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="TrendingUp" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Top Stations" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
 
-                <!-- Volume Control -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <TextBlock Text="🔊"
-                              VerticalAlignment="Center"
-                              Margin="0,0,10,0"
-                              FontSize="16"/>
-                    <Slider Width="120"
-                           Minimum="0"
-                           Maximum="100"
-                           Value="{Binding Volume, Mode=TwoWay, Converter={StaticResource VolumeConverter}}"
-                           VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding Volume, StringFormat='{}{0:F0}%', Converter={StaticResource VolumePercentConverter}}"
-                              VerticalAlignment="Center"
-                              Margin="10,0,0,0"
-                              Width="40"/>
-                </StackPanel>
+                        <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Command="{Binding LoadFavoritesCommand}"
+                                Margin="0,0,0,8"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Star" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Favorites" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Separator Margin="0,16" />
+
+                        <TextBlock Text="Filters"
+                                  FontSize="14"
+                                  FontWeight="Medium"
+                                  Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                  Margin="0,0,0,12"/>
+
+                        <TextBox materialDesign:HintAssist.Hint="Country"
+                                Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                Margin="0,0,0,12"/>
+
+                        <TextBox materialDesign:HintAssist.Hint="Language"
+                                Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                Margin="0,0,0,12"/>
+
+                        <TextBox materialDesign:HintAssist.Hint="Genre"
+                                Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                Margin="0,0,0,12"/>
+
+                        <ComboBox materialDesign:HintAssist.Hint="Codec"
+                                 Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                 Margin="0,0,0,12">
+                            <ComboBoxItem Content="All"/>
+                            <ComboBoxItem Content="MP3"/>
+                            <ComboBoxItem Content="AAC"/>
+                            <ComboBoxItem Content="OGG"/>
+                        </ComboBox>
+
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Station List Area -->
+                <materialDesign:Card Grid.Column="1" materialDesign:ElevationAssist.Elevation="Dp2">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Search Bar -->
+                        <Grid Grid.Row="0" Margin="16,16,16,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox Grid.Column="0"
+                                    materialDesign:HintAssist.Hint="Search stations by name, genre, or country..."
+                                    Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,12,0">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding SearchStationsCommand}"/>
+                                </TextBox.InputBindings>
+                            </TextBox>
+
+                            <Button Grid.Column="1"
+                                   Style="{StaticResource MaterialDesignRaisedButton}"
+                                   Command="{Binding SearchStationsCommand}"
+                                   VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="Magnify" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Search" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <!-- Stations ListView -->
+                        <ListView Grid.Row="1"
+                                 ItemsSource="{Binding Stations}"
+                                 SelectedItem="{Binding SelectedStation}"
+                                 Margin="8"
+                                 MouseDoubleClick="StationsList_MouseDoubleClick">
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="Station" Width="280">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="Radio"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="0,0,8,0"
+                                                                            Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                                    <TextBlock Text="{Binding Name}"
+                                                              VerticalAlignment="Center"
+                                                              FontWeight="Medium"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+
+                                    <GridViewColumn Header="Country" Width="140">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="MapMarker"
+                                                                            Width="14" Height="14"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="0,0,6,0"
+                                                                            Opacity="0.6"/>
+                                                    <TextBlock Text="{Binding Country}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+
+                                    <GridViewColumn Header="Genre" Width="160" DisplayMemberBinding="{Binding Tags}"/>
+
+                                    <GridViewColumn Header="Quality" Width="120">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="HighDefinition"
+                                                                            Width="14" Height="14"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="0,0,6,0"
+                                                                            Opacity="0.6"/>
+                                                    <TextBlock VerticalAlignment="Center">
+                                                        <Run Text="{Binding Codec}"/>
+                                                        <Run Text=" - "/>
+                                                        <Run Text="{Binding Bitrate, StringFormat='{}{0} kbps'}"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                    </Grid>
+                </materialDesign:Card>
             </Grid>
-        </Border>
-    </Grid>
+
+            <!-- Player Controls Bar -->
+            <materialDesign:ColorZone Grid.Row="2" Mode="PrimaryLight" Padding="16" materialDesign:ElevationAssist.Elevation="Dp8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Playback Controls -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource MaterialDesignFloatingActionButton}"
+                                Command="{Binding PlayStationCommand}"
+                                IsEnabled="{Binding SelectedStation, Converter={StaticResource NullToBooleanConverter}}"
+                                Width="56" Height="56"
+                                Margin="0,0,16,0"
+                                ToolTip="Play selected station">
+                            <materialDesign:PackIcon Kind="Play" Width="32" Height="32"/>
+                        </Button>
+
+                        <Button Style="{StaticResource MaterialDesignIconButton}"
+                                Command="{Binding StopStationCommand}"
+                                IsEnabled="{Binding IsPlaying}"
+                                Width="40" Height="40"
+                                Margin="0,0,12,0"
+                                ToolTip="Stop playback">
+                            <materialDesign:PackIcon Kind="Stop" Width="24" Height="24"/>
+                        </Button>
+
+                        <ToggleButton Style="{StaticResource MaterialDesignActionToggleButton}"
+                                     Command="{Binding ToggleFavoriteCommand}"
+                                     IsEnabled="{Binding SelectedStation, Converter={StaticResource NullToBooleanConverter}}"
+                                     Width="40" Height="40"
+                                     ToolTip="Add to favorites">
+                            <ToggleButton.Content>
+                                <materialDesign:PackIcon Kind="StarOutline" Width="24" Height="24"/>
+                            </ToggleButton.Content>
+                            <materialDesign:ToggleButtonAssist.OnContent>
+                                <materialDesign:PackIcon Kind="Star" Width="24" Height="24"/>
+                            </materialDesign:ToggleButtonAssist.OnContent>
+                        </ToggleButton>
+                    </StackPanel>
+
+                    <!-- Status Display -->
+                    <StackPanel Grid.Column="1"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Orientation="Vertical">
+                        <TextBlock Text="{Binding StatusMessage, FallbackValue='Ready'}"
+                                  FontSize="14"
+                                  FontWeight="Medium"
+                                  HorizontalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
+                            <materialDesign:PackIcon Kind="Loading"
+                                                    Width="16" Height="16"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,6,0"
+                                                    Visibility="{Binding IsBuffering, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <materialDesign:PackIcon.RenderTransform>
+                                    <RotateTransform/>
+                                </materialDesign:PackIcon.RenderTransform>
+                                <materialDesign:PackIcon.Triggers>
+                                    <EventTrigger RoutedEvent="Loaded">
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                               From="0" To="360" Duration="0:0:2" RepeatBehavior="Forever"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </EventTrigger>
+                                </materialDesign:PackIcon.Triggers>
+                            </materialDesign:PackIcon>
+                            <TextBlock Text="{Binding IsBuffering, Converter={StaticResource BoolToBufferingConverter}}"
+                                      FontSize="12"
+                                      Foreground="{DynamicResource SecondaryHueMidBrush}"
+                                      FontWeight="Bold"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Volume Control -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="VolumeHigh"
+                                                Width="24" Height="24"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,12,0"/>
+                        <Slider Width="140"
+                               Minimum="0"
+                               Maximum="100"
+                               Value="{Binding Volume, Mode=TwoWay, Converter={StaticResource VolumeConverter}}"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource MaterialDesignDiscreteSlider}"/>
+                        <TextBlock Text="{Binding Volume, StringFormat='{}{0:F0}%', Converter={StaticResource VolumePercentConverter}}"
+                                  VerticalAlignment="Center"
+                                  Margin="12,0,0,0"
+                                  Width="45"
+                                  FontWeight="Medium"/>
+                    </StackPanel>
+                </Grid>
+            </materialDesign:ColorZone>
+        </Grid>
+    </materialDesign:DialogHost>
 </Window>
