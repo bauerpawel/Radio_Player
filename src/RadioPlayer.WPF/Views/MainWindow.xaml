@@ -1,0 +1,172 @@
+<Window x:Class="RadioPlayer.WPF.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Radio Player"
+        Height="600"
+        Width="900"
+        MinHeight="500"
+        MinWidth="700"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Header/Now Playing -->
+            <RowDefinition Height="*"/>     <!-- Main Content -->
+            <RowDefinition Height="Auto"/> <!-- Player Controls -->
+        </Grid.RowDefinitions>
+
+        <!-- Header / Now Playing Section -->
+        <Border Grid.Row="0"
+                Background="{StaticResource PrimaryBrush}"
+                Padding="20">
+            <StackPanel>
+                <TextBlock Text="Radio Player"
+                          FontSize="24"
+                          FontWeight="Bold"
+                          Foreground="White"
+                          Margin="0,0,0,10"/>
+                <TextBlock x:Name="NowPlayingText"
+                          Text="Select a station to start playing"
+                          FontSize="16"
+                          Foreground="White"
+                          Opacity="0.9"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Content Area -->
+        <Grid Grid.Row="1" Margin="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Sidebar Navigation -->
+            <Border Grid.Column="0"
+                    Background="{StaticResource SurfaceBrush}"
+                    CornerRadius="8"
+                    Margin="0,0,10,0"
+                    Padding="15">
+                <StackPanel>
+                    <TextBlock Text="Navigation"
+                              FontSize="14"
+                              FontWeight="Bold"
+                              Margin="0,0,0,15"/>
+
+                    <Button Content="Browse Stations"
+                            Margin="0,0,0,10"
+                            HorizontalAlignment="Stretch"
+                            Padding="10"/>
+                    <Button Content="Favorites"
+                            Margin="0,0,0,10"
+                            HorizontalAlignment="Stretch"
+                            Padding="10"/>
+                    <Button Content="Recent"
+                            Margin="0,0,0,10"
+                            HorizontalAlignment="Stretch"
+                            Padding="10"/>
+                    <Button Content="Settings"
+                            Margin="0,0,0,10"
+                            HorizontalAlignment="Stretch"
+                            Padding="10"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Station List / Content Area -->
+            <Border Grid.Column="1"
+                    Background="{StaticResource SurfaceBrush}"
+                    CornerRadius="8"
+                    Padding="15">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Search Bar -->
+                    <TextBox x:Name="SearchBox"
+                            Grid.Row="0"
+                            Padding="10"
+                            Margin="0,0,0,15"
+                            FontSize="14"
+                            Text="Search stations..."/>
+
+                    <!-- Stations List -->
+                    <ListView x:Name="StationsListView"
+                             Grid.Row="1"
+                             Background="White"
+                             BorderThickness="0">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Station Name" Width="200"/>
+                                <GridViewColumn Header="Country" Width="100"/>
+                                <GridViewColumn Header="Genre" Width="120"/>
+                                <GridViewColumn Header="Codec" Width="80"/>
+                                <GridViewColumn Header="Bitrate" Width="80"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Player Controls -->
+        <Border Grid.Row="2"
+                Background="{StaticResource SurfaceBrush}"
+                BorderThickness="0,1,0,0"
+                BorderBrush="#E0E0E0"
+                Padding="20">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Playback Controls -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button x:Name="PlayButton"
+                            Content="▶ Play"
+                            Style="{StaticResource PrimaryButton}"
+                            Margin="0,0,10,0"
+                            Width="100"/>
+                    <Button x:Name="StopButton"
+                            Content="⏹ Stop"
+                            Padding="16,8"
+                            Width="100"/>
+                </StackPanel>
+
+                <!-- Status Display -->
+                <StackPanel Grid.Column="1"
+                           Orientation="Horizontal"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center">
+                    <TextBlock x:Name="StatusText"
+                              Text="Ready"
+                              FontSize="12"
+                              Foreground="{StaticResource SecondaryTextBrush}"/>
+                </StackPanel>
+
+                <!-- Volume Control -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <TextBlock Text="🔊 Volume:"
+                              VerticalAlignment="Center"
+                              Margin="0,0,10,0"/>
+                    <Slider x:Name="VolumeSlider"
+                           Width="120"
+                           Minimum="0"
+                           Maximum="100"
+                           Value="80"
+                           VerticalAlignment="Center"/>
+                    <TextBlock x:Name="VolumeText"
+                              Text="80%"
+                              VerticalAlignment="Center"
+                              Margin="10,0,0,0"
+                              Width="40"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
