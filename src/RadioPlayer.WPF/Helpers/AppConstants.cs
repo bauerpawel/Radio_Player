@@ -15,19 +15,19 @@ public static class AppConstants
     public static class AudioBuffer
     {
         /// <summary>
-        /// Total buffer duration (5-10 seconds recommended)
+        /// Total buffer duration (10 seconds for better MP3 streaming)
         /// </summary>
-        public static readonly TimeSpan BufferDuration = TimeSpan.FromSeconds(5);
+        public static TimeSpan BufferDuration = TimeSpan.FromSeconds(10);
 
         /// <summary>
-        /// Minimum buffer before starting playback (2 seconds)
+        /// Minimum buffer before starting playback (3 seconds for stability)
         /// </summary>
-        public static readonly TimeSpan PreBufferDuration = TimeSpan.FromSeconds(2);
+        public static TimeSpan PreBufferDuration = TimeSpan.FromSeconds(3);
 
         /// <summary>
-        /// Chunk size per read (8-16 KB recommended)
+        /// Chunk size per read (32 KB for better MP3 frame parsing)
         /// </summary>
-        public const int ChunkSize = 16384; // 16 KB
+        public const int ChunkSize = 32768; // 32 KB
 
         /// <summary>
         /// Buffer check interval (250ms = 4x per second)

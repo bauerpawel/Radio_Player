@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 using NAudio.Vorbis;
 using Polly;
 using Polly.Retry;
@@ -270,7 +271,6 @@ public class NAudioRadioPlayer : IRadioPlayer
     {
         var parser = new IcyMetadataParser(metadataInterval);
         var readBuffer = new byte[AppConstants.AudioBuffer.ChunkSize];
-        var audioDataBuffer = new MemoryStream();
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -293,20 +293,10 @@ public class NAudioRadioPlayer : IRadioPlayer
                 MetadataReceived?.Invoke(this, result.Metadata);
             }
 
-            // Accumulate audio data
+            // Process audio data directly (no intermediate buffer for MP3)
             if (result.AudioData.Length > 0)
             {
-                await audioDataBuffer.WriteAsync(result.AudioData, 0, result.AudioData.Length, cancellationToken);
-
-                // Process when we have enough data
-                if (audioDataBuffer.Length >= AppConstants.AudioBuffer.ChunkSize)
-                {
-                    // Reset position to beginning before processing
-                    audioDataBuffer.Position = 0;
-                    await ProcessAudioStreamAsync(audioDataBuffer, codec, cancellationToken);
-                    audioDataBuffer.SetLength(0);
-                    audioDataBuffer.Position = 0;
-                }
+                await ProcessRawAudioDataAsync(result.AudioData, codec, cancellationToken);
             }
         }
     }
@@ -317,6 +307,97 @@ public class NAudioRadioPlayer : IRadioPlayer
         CancellationToken cancellationToken)
     {
         await ProcessAudioStreamAsync(stream, codec, cancellationToken);
+    }
+
+    private async Task ProcessRawAudioDataAsync(
+        byte[] audioData,
+        string codec,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // For MP3, parse frames directly from raw data
+            if (codec.ToUpperInvariant() == "MP3" || codec.ToUpperInvariant() == "MPEG")
+            {
+                await ProcessMp3RawDataAsync(audioData, cancellationToken);
+            }
+            else
+            {
+                // For AAC/OGG, wrap in MemoryStream and use appropriate reader
+                using var memStream = new MemoryStream(audioData);
+                await ProcessAudioStreamAsync(memStream, codec, cancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] Raw audio processing error: {ex.Message}");
+        }
+    }
+
+    private async Task ProcessMp3RawDataAsync(byte[] mp3Data, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var memStream = new MemoryStream(mp3Data);
+
+            // Parse all MP3 frames from the data
+            while (memStream.Position < memStream.Length && !cancellationToken.IsCancellationRequested)
+            {
+                Mp3Frame? frame = null;
+                try
+                {
+                    frame = Mp3Frame.LoadFromStream(memStream);
+                }
+                catch
+                {
+                    // Skip invalid data
+                    break;
+                }
+
+                if (frame == null)
+                    break;
+
+                // Initialize playback on first frame
+                if (_bufferedWaveProvider == null)
+                {
+                    var waveFormat = new Mp3WaveFormat(
+                        frame.SampleRate,
+                        frame.ChannelMode == ChannelMode.Mono ? 1 : 2,
+                        frame.FrameLength,
+                        frame.BitRate);
+
+                    InitializePlayback(waveFormat);
+                }
+
+                // Decompress and add to buffer
+                if (_bufferedWaveProvider != null)
+                {
+                    var decompressor = new AcmMp3FrameDecompressor(new Mp3WaveFormat(
+                        frame.SampleRate,
+                        frame.ChannelMode == ChannelMode.Mono ? 1 : 2,
+                        frame.FrameLength,
+                        frame.BitRate));
+
+                    var decompressed = new byte[16384 * 4]; // Larger buffer
+                    int decompressedBytes = decompressor.DecompressFrame(frame, decompressed, 0);
+
+                    if (decompressedBytes > 0)
+                    {
+                        _bufferedWaveProvider.AddSamples(decompressed, 0, decompressedBytes);
+                    }
+
+                    decompressor.Dispose();
+                }
+            }
+
+            // Report progress after processing all frames
+            ReportProgress();
+            await HandleBufferingAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] MP3 frame processing error: {ex.Message}");
+        }
     }
 
     private async Task ProcessAudioStreamAsync(
