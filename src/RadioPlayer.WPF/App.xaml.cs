@@ -14,7 +14,7 @@ public partial class App : Application
 {
     private ServiceProvider? _serviceProvider;
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
@@ -23,9 +23,20 @@ public partial class App : Application
         ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
 
-        // TODO: Initialize services when implementations are ready
-        // var repository = _serviceProvider.GetRequiredService<IRadioStationRepository>();
-        // await repository.InitializeDatabaseAsync();
+        // Initialize database
+        try
+        {
+            var repository = _serviceProvider.GetRequiredService<IRadioStationRepository>();
+            await repository.InitializeDatabaseAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Failed to initialize database: {ex.Message}",
+                "Database Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
 
     private void ConfigureServices(IServiceCollection services)
@@ -35,9 +46,9 @@ public partial class App : Application
 
         // Register services
         services.AddSingleton<IRadioBrowserService, RadioBrowserService>();
+        services.AddSingleton<IRadioStationRepository, RadioStationRepository>();
 
-        // TODO: Register when implementations are ready
-        // services.AddSingleton<IRadioStationRepository, RadioStationRepository>();
+        // TODO: Register when implementation is ready
         // services.AddSingleton<IRadioPlayer, NAudioRadioPlayer>();
 
         // Register ViewModels
