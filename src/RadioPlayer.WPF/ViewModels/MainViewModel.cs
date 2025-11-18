@@ -230,6 +230,8 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void ShowStreamInfo()
     {
+        if (_radioPlayer == null) return;
+
         var streamInfoDialog = new Views.StreamInfoDialog(SelectedStation, _radioPlayer, NowPlaying);
         streamInfoDialog.ShowDialog();
     }

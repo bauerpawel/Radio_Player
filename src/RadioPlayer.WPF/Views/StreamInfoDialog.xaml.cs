@@ -39,7 +39,7 @@ public partial class StreamInfoDialog : Window
         // Note: Sample Rate and Channels would need to be exposed by IRadioPlayer
         SampleRateText.Text = "Available during playback";
         ChannelsText.Text = "Available during playback";
-        BufferText.Text = player.State == NAudio.Wave.PlaybackState.Playing ? "Playing" : "Stopped";
+        BufferText.Text = player.State == Models.PlaybackState.Playing ? "Playing" : "Stopped";
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
