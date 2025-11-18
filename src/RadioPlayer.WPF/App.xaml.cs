@@ -4,6 +4,7 @@ using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using RadioPlayer.WPF.Services;
 using RadioPlayer.WPF.ViewModels;
+using RadioPlayer.WPF.Views;
 
 namespace RadioPlayer.WPF;
 
@@ -37,6 +38,10 @@ public partial class App : Application
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
+
+        // Create and show main window
+        var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+        mainWindow.Show();
     }
 
     private void ConfigureServices(IServiceCollection services)
@@ -51,6 +56,9 @@ public partial class App : Application
 
         // Register ViewModels
         services.AddTransient<MainViewModel>();
+
+        // Register Views
+        services.AddTransient<MainWindow>();
     }
 
     protected override void OnExit(ExitEventArgs e)

@@ -28,8 +28,7 @@
                           FontWeight="Bold"
                           Foreground="White"
                           Margin="0,0,0,10"/>
-                <TextBlock x:Name="NowPlayingText"
-                          Text="Select a station to start playing"
+                <TextBlock Text="{Binding NowPlaying, FallbackValue='Select a station to start playing'}"
                           FontSize="16"
                           Foreground="White"
                           Opacity="0.9"/>
@@ -55,22 +54,21 @@
                               FontWeight="Bold"
                               Margin="0,0,0,15"/>
 
-                    <Button Content="Browse Stations"
+                    <Button Content="Top Stations"
+                            Command="{Binding LoadTopStationsCommand}"
                             Margin="0,0,0,10"
                             HorizontalAlignment="Stretch"
                             Padding="10"/>
                     <Button Content="Favorites"
+                            Command="{Binding LoadFavoritesCommand}"
                             Margin="0,0,0,10"
                             HorizontalAlignment="Stretch"
                             Padding="10"/>
-                    <Button Content="Recent"
+                    <Button Content="Search"
                             Margin="0,0,0,10"
                             HorizontalAlignment="Stretch"
-                            Padding="10"/>
-                    <Button Content="Settings"
-                            Margin="0,0,0,10"
-                            HorizontalAlignment="Stretch"
-                            Padding="10"/>
+                            Padding="10"
+                            Click="SearchButton_Click"/>
                 </StackPanel>
             </Border>
 
@@ -86,25 +84,50 @@
                     </Grid.RowDefinitions>
 
                     <!-- Search Bar -->
-                    <TextBox x:Name="SearchBox"
-                            Grid.Row="0"
-                            Padding="10"
-                            Margin="0,0,0,15"
-                            FontSize="14"
-                            Text="Search stations..."/>
+                    <Grid Grid.Row="0" Margin="0,0,0,15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox Grid.Column="0"
+                                Padding="10"
+                                FontSize="14"
+                                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                VerticalContentAlignment="Center">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding SearchStationsCommand}"/>
+                            </TextBox.InputBindings>
+                        </TextBox>
+
+                        <Button Grid.Column="1"
+                                Content="Search"
+                                Command="{Binding SearchStationsCommand}"
+                                Style="{StaticResource PrimaryButton}"
+                                Margin="10,0,0,0"
+                                Padding="20,10"/>
+                    </Grid>
 
                     <!-- Stations List -->
-                    <ListView x:Name="StationsListView"
-                             Grid.Row="1"
+                    <ListView Grid.Row="1"
+                             ItemsSource="{Binding Stations}"
+                             SelectedItem="{Binding SelectedStation}"
                              Background="White"
-                             BorderThickness="0">
+                             BorderThickness="0"
+                             MouseDoubleClick="StationsList_MouseDoubleClick">
                         <ListView.View>
                             <GridView>
-                                <GridViewColumn Header="Station Name" Width="200"/>
-                                <GridViewColumn Header="Country" Width="100"/>
-                                <GridViewColumn Header="Genre" Width="120"/>
-                                <GridViewColumn Header="Codec" Width="80"/>
-                                <GridViewColumn Header="Bitrate" Width="80"/>
+                                <GridViewColumn Header="Station Name" Width="250" DisplayMemberBinding="{Binding Name}"/>
+                                <GridViewColumn Header="Country" Width="120" DisplayMemberBinding="{Binding Country}"/>
+                                <GridViewColumn Header="Genre" Width="150" DisplayMemberBinding="{Binding Tags}"/>
+                                <GridViewColumn Header="Codec" Width="80" DisplayMemberBinding="{Binding Codec}"/>
+                                <GridViewColumn Header="Bitrate" Width="80">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Bitrate, StringFormat='{}{0} kbps'}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
                             </GridView>
                         </ListView.View>
                     </ListView>
@@ -127,15 +150,25 @@
 
                 <!-- Playback Controls -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <Button x:Name="PlayButton"
-                            Content="▶ Play"
+                    <Button Content="▶ Play"
+                            Command="{Binding PlayStationCommand}"
                             Style="{StaticResource PrimaryButton}"
                             Margin="0,0,10,0"
-                            Width="100"/>
-                    <Button x:Name="StopButton"
-                            Content="⏹ Stop"
+                            Width="100"
+                            IsEnabled="{Binding SelectedStation, Converter={StaticResource NullToBooleanConverter}}"/>
+                    <Button Content="⏹ Stop"
+                            Command="{Binding StopStationCommand}"
                             Padding="16,8"
-                            Width="100"/>
+                            Width="100"
+                            IsEnabled="{Binding IsPlaying}"/>
+                    <Button Content="⭐"
+                            Command="{Binding ToggleFavoriteCommand}"
+                            Margin="10,0,0,0"
+                            Padding="16,8"
+                            Width="50"
+                            FontSize="16"
+                            IsEnabled="{Binding SelectedStation, Converter={StaticResource NullToBooleanConverter}}"
+                            ToolTip="Add to Favorites"/>
                 </StackPanel>
 
                 <!-- Status Display -->
@@ -143,25 +176,28 @@
                            Orientation="Horizontal"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center">
-                    <TextBlock x:Name="StatusText"
-                              Text="Ready"
+                    <TextBlock Text="{Binding StatusMessage, FallbackValue='Ready'}"
                               FontSize="12"
                               Foreground="{StaticResource SecondaryTextBrush}"/>
+                    <TextBlock Text="{Binding IsBuffering, Converter={StaticResource BoolToBufferingConverter}}"
+                              FontSize="12"
+                              Foreground="{StaticResource AccentBrush}"
+                              Margin="10,0,0,0"
+                              FontWeight="Bold"/>
                 </StackPanel>
 
                 <!-- Volume Control -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <TextBlock Text="🔊 Volume:"
+                    <TextBlock Text="🔊"
                               VerticalAlignment="Center"
-                              Margin="0,0,10,0"/>
-                    <Slider x:Name="VolumeSlider"
-                           Width="120"
+                              Margin="0,0,10,0"
+                              FontSize="16"/>
+                    <Slider Width="120"
                            Minimum="0"
                            Maximum="100"
-                           Value="80"
+                           Value="{Binding Volume, Mode=TwoWay, Converter={StaticResource VolumeConverter}}"
                            VerticalAlignment="Center"/>
-                    <TextBlock x:Name="VolumeText"
-                              Text="80%"
+                    <TextBlock Text="{Binding Volume, StringFormat='{}{0:F0}%', Converter={StaticResource VolumePercentConverter}}"
                               VerticalAlignment="Center"
                               Margin="10,0,0,0"
                               Width="40"/>

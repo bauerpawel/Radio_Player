@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Windows.Input;
+using RadioPlayer.WPF.ViewModels;
 
 namespace RadioPlayer.WPF.Views;
 
@@ -7,33 +9,33 @@ namespace RadioPlayer.WPF.Views;
 /// </summary>
 public partial class MainWindow : Window
 {
-    public MainWindow()
+    private readonly MainViewModel _viewModel;
+
+    public MainWindow(MainViewModel viewModel)
     {
         InitializeComponent();
+        _viewModel = viewModel;
+        DataContext = _viewModel;
 
-        // Wire up event handlers
-        VolumeSlider.ValueChanged += VolumeSlider_ValueChanged;
-        PlayButton.Click += PlayButton_Click;
-        StopButton.Click += StopButton_Click;
+        // Load top stations on startup
+        Loaded += async (s, e) =>
+        {
+            await _viewModel.LoadTopStationsAsync();
+        };
     }
 
-    private void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private async void StationsList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (VolumeText != null)
+        // Play station on double-click
+        if (_viewModel.PlayStationCommand.CanExecute(null))
         {
-            VolumeText.Text = $"{(int)e.NewValue}%";
+            await _viewModel.PlayStationAsync();
         }
     }
 
-    private void PlayButton_Click(object sender, RoutedEventArgs e)
+    private void SearchButton_Click(object sender, RoutedEventArgs e)
     {
-        // TODO: Implement play functionality when RadioPlayer service is ready
-        StatusText.Text = "Playing...";
-    }
-
-    private void StopButton_Click(object sender, RoutedEventArgs e)
-    {
-        // TODO: Implement stop functionality when RadioPlayer service is ready
-        StatusText.Text = "Stopped";
+        // Focus search textbox
+        // This is a simple UI helper - actual search is handled by ViewModel
     }
 }
