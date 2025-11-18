@@ -15,12 +15,12 @@
 
         <TextBlock Grid.Row="0" Text="Buffer Settings" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
 
-        <StackPanel Grid.Row="1" Spacing="15">
+        <StackPanel Grid.Row="1">
             <TextBlock Text="Adjust buffer sizes if you experience stuttering or playback issues."
                       TextWrapping="Wrap" Foreground="{DynamicResource MaterialDesignBodyLight}" Margin="0,0,0,10"/>
 
             <!-- Total Buffer Duration -->
-            <StackPanel>
+            <StackPanel Margin="0,0,0,15">
                 <DockPanel Margin="0,0,0,5">
                     <TextBlock Text="Total Buffer Duration (seconds)" DockPanel.Dock="Left" VerticalAlignment="Center"/>
                     <TextBlock Text="{Binding ElementName=BufferSlider, Path=Value, StringFormat='{}{0:F1}s'}"
@@ -34,7 +34,7 @@
             </StackPanel>
 
             <!-- Pre-Buffer Duration -->
-            <StackPanel>
+            <StackPanel Margin="0,0,0,15">
                 <DockPanel Margin="0,0,0,5">
                     <TextBlock Text="Pre-Buffer Duration (seconds)" DockPanel.Dock="Left" VerticalAlignment="Center"/>
                     <TextBlock Text="{Binding ElementName=PreBufferSlider, Path=Value, StringFormat='{}{0:F1}s'}"
