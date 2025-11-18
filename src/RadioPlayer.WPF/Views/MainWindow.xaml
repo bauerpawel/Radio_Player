@@ -41,12 +41,15 @@
 
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
                         <Button Style="{StaticResource MaterialDesignIconButton}"
-                                ToolTip="Settings"
+                                Command="{Binding OpenSettingsCommand}"
+                                ToolTip="Settings - Configure buffer sizes"
                                 Margin="8,0">
                             <materialDesign:PackIcon Kind="Settings"/>
                         </Button>
                         <Button Style="{StaticResource MaterialDesignIconButton}"
-                                ToolTip="About"
+                                Command="{Binding ShowStreamInfoCommand}"
+                                IsEnabled="{Binding SelectedStation, Converter={StaticResource NullToBooleanConverter}}"
+                                ToolTip="Stream Info - View stream details"
                                 Margin="8,0">
                             <materialDesign:PackIcon Kind="InformationOutline"/>
                         </Button>
