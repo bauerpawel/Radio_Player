@@ -219,4 +219,18 @@ public partial class MainViewModel : ObservableObject
             _radioPlayer.Volume = value;
         }
     }
+
+    [RelayCommand]
+    private void OpenSettings()
+    {
+        var settingsDialog = new Views.SettingsDialog();
+        settingsDialog.ShowDialog();
+    }
+
+    [RelayCommand]
+    private void ShowStreamInfo()
+    {
+        var streamInfoDialog = new Views.StreamInfoDialog(SelectedStation, _radioPlayer, NowPlaying);
+        streamInfoDialog.ShowDialog();
+    }
 }
