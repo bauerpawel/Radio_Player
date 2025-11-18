@@ -5,7 +5,9 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
-    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+    <!-- TODO: Add icon - Download from https://icon-icons.com/search/icons/radio (ICO format)
+         and save as Resources\app.ico, then uncomment the line below -->
+    <!-- <ApplicationIcon>Resources\app.ico</ApplicationIcon> -->
     <AssemblyName>RadioPlayer</AssemblyName>
     <RootNamespace>RadioPlayer.WPF</RootNamespace>
     <Version>1.0.0</Version>
