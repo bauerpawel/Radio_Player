@@ -18,6 +18,7 @@
   <ItemGroup>
     <!-- Audio Streaming -->
     <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
 
     <!-- Database -->
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
@@ -30,8 +31,9 @@
     <!-- MVVM Framework -->
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
 
-    <!-- UI Enhancements (Optional - can add Material Design or Fluent UI later) -->
-    <!-- <PackageReference Include="MaterialDesignThemes" Version="5.1.0" /> -->
+    <!-- UI Enhancements - Material Design -->
+    <PackageReference Include="MaterialDesignThemes" Version="5.1.0" />
+    <PackageReference Include="MaterialDesignColors" Version="3.1.0" />
   </ItemGroup>
 
   <ItemGroup>
