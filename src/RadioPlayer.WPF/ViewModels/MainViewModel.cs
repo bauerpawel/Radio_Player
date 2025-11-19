@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -109,7 +110,7 @@ public partial class MainViewModel : ObservableObject
             {
                 var stations = await _radioBrowserService.SearchStationsAsync(
                     searchTerm: null,
-                    country: NormalizeFilter(CountryFilter),
+                    country: NormalizeCountryFilter(CountryFilter),
                     language: NormalizeFilter(LanguageFilter),
                     tag: NormalizeFilter(GenreFilter),
                     codec: NormalizeFilter(CodecFilter),
@@ -156,7 +157,7 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = "Searching...";
             var stations = await _radioBrowserService.SearchStationsAsync(
                 searchTerm: NormalizeFilter(SearchText),
-                country: NormalizeFilter(CountryFilter),
+                country: NormalizeCountryFilter(CountryFilter),
                 language: NormalizeFilter(LanguageFilter),
                 tag: NormalizeFilter(GenreFilter),
                 codec: NormalizeFilter(CodecFilter),
@@ -316,6 +317,23 @@ public partial class MainViewModel : ObservableObject
             return null;
 
         return filter.Trim().ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Normalizes country name to Title Case (first letter of each word uppercase)
+    /// Radio Browser API requires proper country names: "Poland", "United States", etc.
+    /// Examples: "poland" → "Poland", "united states" → "United States", "POLAND" → "Poland"
+    /// </summary>
+    private static string? NormalizeCountryFilter(string? country)
+    {
+        if (string.IsNullOrWhiteSpace(country))
+            return null;
+
+        var trimmed = country.Trim();
+
+        // ToTitleCase requires lowercase input to work properly with all-caps text
+        var textInfo = CultureInfo.CurrentCulture.TextInfo;
+        return textInfo.ToTitleCase(trimmed.ToLower());
     }
 
     /// <summary>
