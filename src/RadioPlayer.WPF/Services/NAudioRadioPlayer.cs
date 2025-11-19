@@ -38,7 +38,7 @@ public class NAudioRadioPlayer : IRadioPlayer
     private MemoryStream? _mp3Accumulator;
     private MemoryStream? _oggAccumulator;
     private MemoryStream? _aacAccumulator;
-    private const int MinimumMp3DataSize = 131072; // 128KB minimum before processing MP3
+    private const int MinimumMp3DataSize = 32768; // 32KB minimum before processing MP3 (reduced from 128KB to avoid buffer underruns)
     private const int MinimumOggDataSize = 65536; // 64KB minimum before processing
     private const int MinimumAacDataSize = 32768; // 32KB minimum before processing
 
