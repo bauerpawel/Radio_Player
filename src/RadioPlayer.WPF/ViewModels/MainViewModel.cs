@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -116,6 +117,7 @@ public partial class MainViewModel : ObservableObject
 
                 await UpdateFavoriteStatusAsync(stations);
                 Stations = new ObservableCollection<RadioStation>(stations);
+                UpdateCurrentlyPlayingStationReference();
                 StatusMessage = $"Loaded {stations.Count} stations with filters";
             }
             else
@@ -123,6 +125,7 @@ public partial class MainViewModel : ObservableObject
                 var stations = await _radioBrowserService.GetTopVotedStationsAsync(limit: 100);
                 await UpdateFavoriteStatusAsync(stations);
                 Stations = new ObservableCollection<RadioStation>(stations);
+                UpdateCurrentlyPlayingStationReference();
                 StatusMessage = $"Loaded {stations.Count} stations";
             }
         }
@@ -163,6 +166,7 @@ public partial class MainViewModel : ObservableObject
             await UpdateFavoriteStatusAsync(stations);
 
             Stations = new ObservableCollection<RadioStation>(stations);
+            UpdateCurrentlyPlayingStationReference();
             StatusMessage = $"Found {stations.Count} stations";
         }
         catch (Exception ex)
@@ -264,6 +268,7 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = "Loading favorites...";
             var favorites = await _repository.GetFavoriteStationsAsync();
             Stations = new ObservableCollection<RadioStation>(favorites);
+            UpdateCurrentlyPlayingStationReference();
             StatusMessage = favorites.Count > 0
                 ? $"Loaded {favorites.Count} favorite stations"
                 : "No favorite stations yet";
@@ -311,6 +316,26 @@ public partial class MainViewModel : ObservableObject
             return null;
 
         return filter.Trim().ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Updates CurrentlyPlayingStation reference to match the new station instance in the list
+    /// This is needed because when we reload stations, we get new object instances
+    /// but we want to keep the same station selected (by UUID) for the playing indicator
+    /// </summary>
+    private void UpdateCurrentlyPlayingStationReference()
+    {
+        if (CurrentlyPlayingStation == null || Stations == null || Stations.Count == 0)
+            return;
+
+        // Find the station in the new list that matches the currently playing station by UUID
+        var matchingStation = Stations.FirstOrDefault(s => s.StationUuid == CurrentlyPlayingStation.StationUuid);
+
+        if (matchingStation != null)
+        {
+            // Update to the new instance so the visual indicator works
+            CurrentlyPlayingStation = matchingStation;
+        }
     }
 
     // Event handlers for RadioPlayer events
