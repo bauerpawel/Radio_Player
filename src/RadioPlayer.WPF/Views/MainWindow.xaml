@@ -108,6 +108,16 @@
                             </StackPanel>
                         </Button>
 
+                        <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Command="{Binding ShowHistoryCommand}"
+                                Margin="0,0,0,8"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="History" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="History" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
                         <Separator Margin="0,16" />
 
                         <TextBlock Text="Filters"

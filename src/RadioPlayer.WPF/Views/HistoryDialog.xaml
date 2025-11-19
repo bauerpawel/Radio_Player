@@ -1,0 +1,210 @@
+<Window x:Class="RadioPlayer.WPF.Views.HistoryDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Playback History" Height="600" Width="900"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{DynamicResource MaterialDesignFont}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+            <materialDesign:PackIcon Kind="History"
+                                    Width="32" Height="32"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,12,0"
+                                    Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+            <TextBlock Text="Playback History"
+                      FontSize="24"
+                      FontWeight="Bold"
+                      VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Toolbar -->
+        <Grid Grid.Row="1" Margin="0,0,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Search Filter -->
+            <TextBox Grid.Column="0"
+                    x:Name="SearchTextBox"
+                    materialDesign:HintAssist.Hint="Search by station name..."
+                    Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                    TextChanged="SearchTextBox_TextChanged"
+                    Margin="0,0,12,0"/>
+
+            <!-- Refresh Button -->
+            <Button Grid.Column="1"
+                   Click="RefreshButton_Click"
+                   Style="{StaticResource MaterialDesignOutlinedButton}"
+                   ToolTip="Refresh history"
+                   Margin="0,0,12,0">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="Refresh" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <!-- Clear History Button -->
+            <Button Grid.Column="2"
+                   Click="ClearHistoryButton_Click"
+                   Style="{StaticResource MaterialDesignOutlinedButton}"
+                   ToolTip="Clear all history"
+                   Foreground="{DynamicResource ValidationErrorBrush}">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="DeleteOutline" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="Clear All" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!-- History List -->
+        <materialDesign:Card Grid.Row="2" materialDesign:ElevationAssist.Elevation="Dp2">
+            <Grid>
+                <!-- Loading indicator -->
+                <StackPanel x:Name="LoadingPanel"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Visibility="Collapsed">
+                    <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                                Value="0"
+                                IsIndeterminate="True"
+                                Width="48" Height="48"/>
+                    <TextBlock Text="Loading history..."
+                              Margin="0,12,0,0"
+                              FontSize="14"
+                              Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                </StackPanel>
+
+                <!-- Empty state -->
+                <StackPanel x:Name="EmptyPanel"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Visibility="Collapsed">
+                    <materialDesign:PackIcon Kind="HistoryOff"
+                                            Width="64" Height="64"
+                                            Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                            HorizontalAlignment="Center"/>
+                    <TextBlock Text="No playback history yet"
+                              Margin="0,12,0,0"
+                              FontSize="16"
+                              FontWeight="SemiBold"
+                              HorizontalAlignment="Center"/>
+                    <TextBlock Text="Start playing stations to build your history"
+                              Margin="0,4,0,0"
+                              FontSize="12"
+                              Foreground="{DynamicResource MaterialDesignBodyLight}"
+                              HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- History ListView -->
+                <ListView x:Name="HistoryListView"
+                         MouseDoubleClick="HistoryListView_MouseDoubleClick"
+                         Margin="8">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Station" Width="280">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="Radio"
+                                                                    VerticalAlignment="Center"
+                                                                    Margin="0,0,8,0"
+                                                                    Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                            <TextBlock Text="{Binding Station.Name}"
+                                                      VerticalAlignment="Center"
+                                                      FontWeight="Medium"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+
+                            <GridViewColumn Header="Date & Time" Width="180">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding StartTime, StringFormat='{}{0:yyyy-MM-dd}'}"
+                                                      FontWeight="Medium"/>
+                                            <TextBlock Text="{Binding StartTime, StringFormat='{}{0:HH:mm:ss}'}"
+                                                      FontSize="11"
+                                                      Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+
+                            <GridViewColumn Header="Duration" Width="120">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="ClockOutline"
+                                                                    Width="14" Height="14"
+                                                                    VerticalAlignment="Center"
+                                                                    Margin="0,0,6,0"
+                                                                    Opacity="0.6"/>
+                                            <TextBlock Text="{Binding DurationFormatted}"
+                                                      VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+
+                            <GridViewColumn Header="Genre" Width="160">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Station.Tags}"
+                                                  TextTrimming="CharacterEllipsis"
+                                                  ToolTip="{Binding Station.Tags}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+
+                            <GridViewColumn Header="Actions" Width="120">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                                               Click="PlayAgainButton_Click"
+                                               Tag="{Binding}"
+                                               Height="28"
+                                               Padding="8,4"
+                                               ToolTip="Play this station again">
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="PlayCircleOutline"
+                                                                        Width="16" Height="16"
+                                                                        VerticalAlignment="Center"
+                                                                        Margin="0,0,4,0"/>
+                                                <TextBlock Text="Play Again" VerticalAlignment="Center" FontSize="11"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Footer -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <TextBlock x:Name="TotalRecordsText"
+                      VerticalAlignment="Center"
+                      Margin="0,0,20,0"
+                      Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+            <Button Content="Close"
+                   Click="CloseButton_Click"
+                   Style="{StaticResource MaterialDesignFlatButton}"
+                   IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

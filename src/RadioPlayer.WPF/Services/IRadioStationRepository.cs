@@ -31,6 +31,7 @@ public interface IRadioStationRepository
     Task<List<ListeningHistory>> GetRecentHistoryAsync(int limit = 50);
     Task<List<ListeningHistory>> GetHistoryForStationAsync(int stationId);
     Task<Dictionary<int, int>> GetMostListenedStationsAsync(int limit = 10);
+    Task ClearListeningHistoryAsync();
 
     // Database maintenance
     Task InitializeDatabaseAsync();

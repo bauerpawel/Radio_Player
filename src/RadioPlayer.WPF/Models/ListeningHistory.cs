@@ -36,4 +36,27 @@ public class ListeningHistory
     /// Navigation property to RadioStation
     /// </summary>
     public RadioStation? Station { get; set; }
+
+    /// <summary>
+    /// Formatted duration for display
+    /// </summary>
+    public string DurationFormatted
+    {
+        get
+        {
+            var duration = TimeSpan.FromSeconds(DurationSeconds);
+            if (duration.TotalHours >= 1)
+            {
+                return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+            }
+            else if (duration.TotalMinutes >= 1)
+            {
+                return $"{duration.Minutes}m {duration.Seconds}s";
+            }
+            else
+            {
+                return $"{duration.Seconds}s";
+            }
+        }
+    }
 }

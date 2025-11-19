@@ -71,6 +71,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<string> _availableCountries = new();
 
+    // Playback history tracking
+    private DateTime? _currentPlaybackStartTime;
+    private int? _currentPlaybackStationId;
+
     public MainViewModel()
     {
         // Constructor for design-time support
@@ -213,6 +217,9 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            // End previous playback session if any
+            await EndCurrentPlaybackHistoryAsync();
+
             StatusMessage = "Connecting...";
             CurrentlyPlayingStation = SelectedStation;
             CurrentTrack = "Loading...";
@@ -223,6 +230,9 @@ public partial class MainViewModel : ObservableObject
             {
                 await _radioBrowserService.RegisterClickAsync(SelectedStation.StationUuid);
             }
+
+            // Start new playback history session
+            await StartPlaybackHistoryAsync(SelectedStation);
         }
         catch (Exception ex)
         {
@@ -233,8 +243,11 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void StopStation()
+    private async Task StopStationAsync()
     {
+        // End current playback history session
+        await EndCurrentPlaybackHistoryAsync();
+
         _radioPlayer?.Stop();
         StatusMessage = "Stopped";
         CurrentlyPlayingStation = null;
@@ -456,6 +469,90 @@ public partial class MainViewModel : ObservableObject
         {
             SelectedStation = detailsDialog.SelectedStation;
             await PlayStationAsync();
+        }
+    }
+
+    [RelayCommand]
+    private async Task ShowHistoryAsync()
+    {
+        if (_repository == null) return;
+
+        var historyDialog = new Views.HistoryDialog(_repository);
+        var result = historyDialog.ShowDialog();
+
+        // If user selected a station to play from history
+        if (result == true && historyDialog.SelectedStationToPlay != null)
+        {
+            SelectedStation = historyDialog.SelectedStationToPlay;
+            await PlayStationAsync();
+        }
+    }
+
+    /// <summary>
+    /// Start tracking playback history for the current station
+    /// </summary>
+    private async Task StartPlaybackHistoryAsync(RadioStation station)
+    {
+        if (_repository == null) return;
+
+        try
+        {
+            // Ensure station is in database
+            var existingStation = await _repository.GetStationByUuidAsync(station.StationUuid);
+            if (existingStation == null)
+            {
+                // Add station to database
+                station.Id = await _repository.AddStationAsync(station);
+            }
+            else
+            {
+                station.Id = existingStation.Id;
+            }
+
+            // Start tracking
+            _currentPlaybackStartTime = DateTime.Now;
+            _currentPlaybackStationId = station.Id;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error starting playback history: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// End current playback history session and save to database
+    /// </summary>
+    private async Task EndCurrentPlaybackHistoryAsync()
+    {
+        if (_repository == null || _currentPlaybackStartTime == null || _currentPlaybackStationId == null)
+            return;
+
+        try
+        {
+            var endTime = DateTime.Now;
+            var duration = (int)(endTime - _currentPlaybackStartTime.Value).TotalSeconds;
+
+            // Only save if played for at least 5 seconds
+            if (duration >= 5)
+            {
+                var history = new ListeningHistory
+                {
+                    StationId = _currentPlaybackStationId.Value,
+                    StartTime = _currentPlaybackStartTime.Value,
+                    DurationSeconds = duration,
+                    DateRecorded = DateTime.Now
+                };
+
+                await _repository.AddListeningHistoryAsync(history);
+            }
+
+            // Reset tracking
+            _currentPlaybackStartTime = null;
+            _currentPlaybackStationId = null;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error ending playback history: {ex.Message}");
         }
     }
 }
