@@ -91,7 +91,7 @@
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            Visibility="Collapsed">
-                    <materialDesign:PackIcon Kind="HistoryOff"
+                    <materialDesign:PackIcon Kind="ClockAlertOutline"
                                             Width="64" Height="64"
                                             Foreground="{DynamicResource MaterialDesignBodyLight}"
                                             HorizontalAlignment="Center"/>
