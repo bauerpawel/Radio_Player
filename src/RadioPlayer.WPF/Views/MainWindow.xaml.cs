@@ -93,8 +93,7 @@ public partial class MainWindow : Window
     {
         _notifyIcon = new Forms.NotifyIcon
         {
-            // Use a generic icon for now (can be replaced with custom icon later)
-            Icon = SystemIcons.Application,
+            Icon = LoadApplicationIcon(),
             Text = "Radio Player",
             Visible = false
         };
@@ -113,6 +112,26 @@ public partial class MainWindow : Window
 
         // Double-click to restore
         _notifyIcon.DoubleClick += (s, e) => RestoreWindow();
+    }
+
+    private Icon LoadApplicationIcon()
+    {
+        try
+        {
+            // Try to load custom icon from Resources folder
+            var iconPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "app.ico");
+            if (System.IO.File.Exists(iconPath))
+            {
+                return new Icon(iconPath);
+            }
+        }
+        catch
+        {
+            // If loading fails, fall back to system icon
+        }
+
+        // Fall back to default system icon
+        return SystemIcons.Application;
     }
 
     private void MainWindow_StateChanged(object? sender, EventArgs e)
