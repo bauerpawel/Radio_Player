@@ -49,7 +49,9 @@ public class NAudioRadioPlayer : IRadioPlayer
         {
             if (_state != value)
             {
+                var oldState = _state;
                 _state = value;
+                DebugLogger.Log("STATE", $"State changed: {oldState} -> {value}");
                 PlaybackStateChanged?.Invoke(this, value);
             }
         }
@@ -132,6 +134,7 @@ public class NAudioRadioPlayer : IRadioPlayer
                 {
                     System.Diagnostics.Debug.WriteLine(
                         $"[RadioPlayer] Retry {retryCount} after {timeSpan.TotalSeconds}s due to: {exception.Message}");
+                    DebugLogger.Log("RETRY", $"Attempt {retryCount} after {timeSpan.TotalSeconds}s - {exception.GetType().Name}: {exception.Message}");
                 });
     }
 
@@ -139,6 +142,8 @@ public class NAudioRadioPlayer : IRadioPlayer
     {
         if (station == null)
             throw new ArgumentNullException(nameof(station));
+
+        DebugLogger.Log("PLAY", $"Starting playback: {station.Name} ({station.Codec})");
 
         // Stop current playback
         Stop();
@@ -159,10 +164,12 @@ public class NAudioRadioPlayer : IRadioPlayer
             {
                 // Expected when stopping
                 System.Diagnostics.Debug.WriteLine("[RadioPlayer] Streaming cancelled");
+                DebugLogger.Log("STREAM", "Streaming cancelled");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[RadioPlayer] Streaming error: {ex.Message}");
+                DebugLogger.Log("ERROR", $"Streaming error: {ex.GetType().Name} - {ex.Message}");
                 State = PlaybackState.Error;
                 ErrorOccurred?.Invoke(this, ex);
             }
@@ -173,6 +180,8 @@ public class NAudioRadioPlayer : IRadioPlayer
 
     public void Stop()
     {
+        DebugLogger.Log("STOP", "Stopping playback");
+
         State = PlaybackState.Stopped;
 
         // Cancel streaming
@@ -259,6 +268,7 @@ public class NAudioRadioPlayer : IRadioPlayer
             var codec = DetectCodec(station, response);
             System.Diagnostics.Debug.WriteLine(
                 $"[RadioPlayer] Connected to {station.Name}, Codec: {codec}, ICY metadata interval: {metadataInterval}");
+            DebugLogger.Log("CONNECT", $"Connected - Codec: {codec}, ICY interval: {metadataInterval}");
 
             using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
@@ -388,14 +398,17 @@ public class NAudioRadioPlayer : IRadioPlayer
             if (_mp3Accumulator == null)
             {
                 _mp3Accumulator = new MemoryStream();
+                DebugLogger.Log("MP3", "MP3 accumulator initialized");
             }
 
             // Add new data to accumulator
             await _mp3Accumulator.WriteAsync(mp3Data, 0, mp3Data.Length, cancellationToken);
+            DebugLogger.Log("MP3", $"Accumulated {mp3Data.Length} bytes, total: {_mp3Accumulator.Length} bytes");
 
             // Process when we have enough data (128KB for smooth playback)
             if (_mp3Accumulator.Length >= MinimumMp3DataSize)
             {
+                DebugLogger.Log("MP3", $"Processing MP3 batch: {_mp3Accumulator.Length} bytes");
                 _mp3Accumulator.Position = 0;
 
                 // Use same approach as OGG/AAC - ProcessAudioStreamAsync handles buffering properly
@@ -409,6 +422,7 @@ public class NAudioRadioPlayer : IRadioPlayer
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[RadioPlayer] MP3 accumulation error: {ex.Message}");
+            DebugLogger.Log("MP3", $"MP3 accumulation error: {ex.Message}");
             // Reset accumulator on error
             _mp3Accumulator?.Dispose();
             _mp3Accumulator = null;
@@ -530,12 +544,19 @@ public class NAudioRadioPlayer : IRadioPlayer
                 // Read and buffer audio data
                 var buffer = new byte[AppConstants.AudioBuffer.ChunkSize];
                 int bytesRead;
+                int chunkCount = 0;
 
                 while ((bytesRead = reader.Read(buffer, 0, buffer.Length)) > 0 && !cancellationToken.IsCancellationRequested)
                 {
                     if (_bufferedWaveProvider != null)
                     {
                         _bufferedWaveProvider.AddSamples(buffer, 0, bytesRead);
+                        chunkCount++;
+
+                        var bufferSeconds = _bufferedWaveProvider.BufferedDuration.TotalSeconds;
+                        var bufferPercent = BufferFillPercentage * 100;
+
+                        DebugLogger.Log("BUFFER", $"Chunk {chunkCount}: +{bytesRead} bytes, buffer: {bufferSeconds:F2}s ({bufferPercent:F0}%)");
 
                         // Report progress
                         ReportProgress();
@@ -545,6 +566,7 @@ public class NAudioRadioPlayer : IRadioPlayer
                     }
                 }
 
+                DebugLogger.Log("BUFFER", $"Stream read completed, total chunks: {chunkCount}");
                 reader?.Dispose();
             }
         }
@@ -559,6 +581,9 @@ public class NAudioRadioPlayer : IRadioPlayer
     {
         System.Diagnostics.Debug.WriteLine(
             $"[RadioPlayer] Initializing playback: {waveFormat.SampleRate}Hz, {waveFormat.Channels}ch, {waveFormat.Encoding}");
+
+        DebugLogger.Log("INIT", $"Initializing playback: {waveFormat.SampleRate}Hz, {waveFormat.Channels}ch, {waveFormat.Encoding}");
+        DebugLogger.Log("INIT", $"Buffer config: {AppConstants.AudioBuffer.BufferDuration.TotalSeconds}s total, {AppConstants.AudioBuffer.PreBufferDuration.TotalSeconds}s pre-buffer");
 
         _bufferedWaveProvider = new BufferedWaveProvider(waveFormat)
         {
@@ -591,6 +616,8 @@ public class NAudioRadioPlayer : IRadioPlayer
             System.Diagnostics.Debug.WriteLine(
                 $"[RadioPlayer] Pre-buffer filled ({bufferedDuration.TotalSeconds:F1}s), starting playback");
 
+            DebugLogger.Log("BUFFERING", $"Pre-buffer filled ({bufferedDuration.TotalSeconds:F2}s), starting playback");
+
             _waveOut.Play();
             State = PlaybackState.Playing;
         }
@@ -600,6 +627,8 @@ public class NAudioRadioPlayer : IRadioPlayer
 
     private async Task MonitorBufferAsync(CancellationToken cancellationToken)
     {
+        DebugLogger.Log("MONITOR", "Buffer monitoring started");
+
         while (!cancellationToken.IsCancellationRequested)
         {
             try
@@ -619,6 +648,8 @@ public class NAudioRadioPlayer : IRadioPlayer
                         System.Diagnostics.Debug.WriteLine(
                             $"[RadioPlayer] Buffer underrun ({bufferedDuration.TotalSeconds:F1}s), pausing");
 
+                        DebugLogger.Log("MONITOR", $"!!! BUFFER UNDERRUN !!! ({bufferedDuration.TotalSeconds:F2}s < {AppConstants.AudioBuffer.PreBufferDuration.TotalSeconds:F2}s), pausing playback");
+
                         _waveOut.Pause();
                         State = PlaybackState.Buffering;
                     }
@@ -631,6 +662,8 @@ public class NAudioRadioPlayer : IRadioPlayer
                         System.Diagnostics.Debug.WriteLine(
                             $"[RadioPlayer] Buffer filled ({bufferedDuration.TotalSeconds:F1}s), resuming");
 
+                        DebugLogger.Log("MONITOR", $"Buffer filled ({bufferedDuration.TotalSeconds:F2}s >= {AppConstants.AudioBuffer.BufferDuration.TotalSeconds:F2}s), resuming playback");
+
                         _waveOut.Play();
                         State = PlaybackState.Playing;
                     }
@@ -638,13 +671,17 @@ public class NAudioRadioPlayer : IRadioPlayer
             }
             catch (OperationCanceledException)
             {
+                DebugLogger.Log("MONITOR", "Buffer monitoring cancelled");
                 break;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[RadioPlayer] Buffer monitoring error: {ex.Message}");
+                DebugLogger.Log("MONITOR", $"Buffer monitoring error: {ex.Message}");
             }
         }
+
+        DebugLogger.Log("MONITOR", "Buffer monitoring stopped");
     }
 
     private void ReportProgress()

@@ -16,12 +16,14 @@ public partial class SettingsDialog : Window
     {
         BufferSlider.Value = AppConstants.AudioBuffer.BufferDuration.TotalSeconds;
         PreBufferSlider.Value = AppConstants.AudioBuffer.PreBufferDuration.TotalSeconds;
+        DebugLoggingCheckBox.IsChecked = AppConstants.Debug.EnableLogging;
     }
 
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
         AppConstants.AudioBuffer.BufferDuration = TimeSpan.FromSeconds(BufferSlider.Value);
         AppConstants.AudioBuffer.PreBufferDuration = TimeSpan.FromSeconds(PreBufferSlider.Value);
+        AppConstants.Debug.EnableLogging = DebugLoggingCheckBox.IsChecked ?? false;
 
         MessageBox.Show(
             "Settings saved! Restart playback for changes to take effect.",
@@ -37,6 +39,7 @@ public partial class SettingsDialog : Window
     {
         BufferSlider.Value = 10;
         PreBufferSlider.Value = 3;
+        DebugLoggingCheckBox.IsChecked = false;
     }
 
     private void CancelButton_Click(object sender, RoutedEventArgs e)
