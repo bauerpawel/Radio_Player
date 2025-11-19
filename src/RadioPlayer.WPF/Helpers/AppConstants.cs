@@ -107,4 +107,27 @@ public static class AppConstants
         public const string UserAgent = "RadioPlayer/1.0";
         public const string IcyMetadata = "1";
     }
+
+    // Debug configuration
+    public static class Debug
+    {
+        /// <summary>
+        /// Enable debug logging to file
+        /// </summary>
+        public static bool EnableLogging = false;
+
+        /// <summary>
+        /// Debug log filename
+        /// </summary>
+        public const string LogFileName = "radioplayer-debug.log";
+
+        /// <summary>
+        /// Debug log path
+        /// </summary>
+        public static string LogFilePath =>
+            System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "RadioPlayer",
+                LogFileName);
+    }
 }
