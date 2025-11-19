@@ -533,6 +533,19 @@ public class RadioStationRepository : IRadioStationRepository
         });
     }
 
+    public async Task ClearListeningHistoryAsync()
+    {
+        await Task.Run(() =>
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM ListeningHistory";
+            command.ExecuteNonQuery();
+        });
+    }
+
     #endregion
 
     #region Database Maintenance

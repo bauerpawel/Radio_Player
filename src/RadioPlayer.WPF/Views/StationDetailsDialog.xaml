@@ -1,0 +1,227 @@
+<Window x:Class="RadioPlayer.WPF.Views.StationDetailsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Station Details" Height="600" Width="700"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{DynamicResource MaterialDesignFont}">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header with Station Name and Logo -->
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Station Favicon/Logo -->
+            <Border Grid.Column="0"
+                    Width="64" Height="64"
+                    CornerRadius="8"
+                    Background="{DynamicResource MaterialDesignDivider}"
+                    Margin="0,0,15,0">
+                <Image x:Name="StationLogoImage"
+                       Stretch="UniformToFill"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ElementName=StationLogoImage, Path=Source}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+            </Border>
+
+            <!-- Station Name -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock x:Name="StationNameText"
+                          FontSize="24"
+                          FontWeight="Bold"
+                          TextWrapping="Wrap"
+                          Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                <TextBlock x:Name="StationTaglineText"
+                          FontSize="14"
+                          FontStyle="Italic"
+                          Foreground="{DynamicResource MaterialDesignBodyLight}"
+                          TextWrapping="Wrap"
+                          Margin="0,5,0,0"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Details Content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Basic Information Card -->
+                <materialDesign:Card Margin="0,0,0,15" Padding="15">
+                    <StackPanel>
+                        <TextBlock Text="Basic Information"
+                                  FontSize="16"
+                                  FontWeight="Bold"
+                                  Margin="0,0,0,10"
+                                  Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+
+                        <!-- Country -->
+                        <Grid Margin="0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Country:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="1" x:Name="CountryText" TextWrapping="Wrap"/>
+                        </Grid>
+
+                        <!-- Language -->
+                        <Grid Margin="0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Language:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="1" x:Name="LanguageText" TextWrapping="Wrap"/>
+                        </Grid>
+
+                        <!-- Tags/Genre -->
+                        <Grid Margin="0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Tags:" FontWeight="SemiBold" VerticalAlignment="Top"/>
+                            <TextBlock Grid.Column="1" x:Name="TagsText" TextWrapping="Wrap"/>
+                        </Grid>
+
+                        <!-- Homepage -->
+                        <Grid Margin="0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Homepage:" FontWeight="SemiBold" VerticalAlignment="Top"/>
+                            <TextBlock Grid.Column="1" x:Name="HomepageText" TextWrapping="Wrap">
+                                <Hyperlink x:Name="HomepageLink" RequestNavigate="Hyperlink_RequestNavigate">
+                                    <Run x:Name="HomepageLinkText"/>
+                                </Hyperlink>
+                            </TextBlock>
+                        </Grid>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Technical Information Card -->
+                <materialDesign:Card Margin="0,0,0,15" Padding="15">
+                    <StackPanel>
+                        <TextBlock Text="Technical Information"
+                                  FontSize="16"
+                                  FontWeight="Bold"
+                                  Margin="0,0,0,10"
+                                  Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+
+                        <!-- Codec -->
+                        <Grid Margin="0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Codec:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="1" x:Name="CodecText"/>
+                        </Grid>
+
+                        <!-- Bitrate -->
+                        <Grid Margin="0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Bitrate:" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="1" x:Name="BitrateText"/>
+                        </Grid>
+
+                        <!-- Stream URL -->
+                        <Grid Margin="0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Stream URL:" FontWeight="SemiBold" VerticalAlignment="Top"/>
+                            <TextBlock Grid.Column="1" x:Name="StreamUrlText" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11"/>
+                        </Grid>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Similar Stations Card -->
+                <materialDesign:Card Margin="0,0,0,0" Padding="15">
+                    <StackPanel>
+                        <TextBlock Text="Similar Stations"
+                                  FontSize="16"
+                                  FontWeight="Bold"
+                                  Margin="0,0,0,10"
+                                  Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+
+                        <TextBlock x:Name="SimilarStationsLoadingText"
+                                  Text="Loading similar stations..."
+                                  FontStyle="Italic"
+                                  Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                  Margin="0,5"/>
+
+                        <ListView x:Name="SimilarStationsList"
+                                 MaxHeight="200"
+                                 SelectionMode="Single"
+                                 MouseDoubleClick="SimilarStationsList_MouseDoubleClick"
+                                 Visibility="Collapsed">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="0,5">
+                                        <materialDesign:PackIcon Kind="Radio"
+                                                                VerticalAlignment="Center"
+                                                                Margin="0,0,10,0"
+                                                                Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Country}"
+                                                      FontSize="11"
+                                                      Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+
+                        <TextBlock x:Name="NoSimilarStationsText"
+                                  Text="No similar stations found"
+                                  FontStyle="Italic"
+                                  Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                  Visibility="Collapsed"
+                                  Margin="0,5"/>
+                    </StackPanel>
+                </materialDesign:Card>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button x:Name="PlayStationButton"
+                   Content="Play Station"
+                   Click="PlayStationButton_Click"
+                   Style="{StaticResource MaterialDesignRaisedButton}"
+                   Margin="0,0,10,0">
+                <Button.Content>
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Play" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Play Station" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button.Content>
+            </Button>
+            <Button Content="Close"
+                   Click="CloseButton_Click"
+                   Style="{StaticResource MaterialDesignFlatButton}"
+                   IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

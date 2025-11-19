@@ -108,6 +108,16 @@
                             </StackPanel>
                         </Button>
 
+                        <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Command="{Binding ShowHistoryCommand}"
+                                Margin="0,0,0,8"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="History" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="History" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
                         <Separator Margin="0,16" />
 
                         <TextBlock Text="Filters"
@@ -267,6 +277,27 @@
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
+
+                                    <GridViewColumn Header="Actions" Width="90">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                       Command="{Binding DataContext.ShowStationDetailsCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                                       CommandParameter="{Binding}"
+                                                       Height="28"
+                                                       Padding="8,4"
+                                                       ToolTip="View station details">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <materialDesign:PackIcon Kind="InformationOutline"
+                                                                                Width="16" Height="16"
+                                                                                VerticalAlignment="Center"
+                                                                                Margin="0,0,4,0"/>
+                                                        <TextBlock Text="Details" VerticalAlignment="Center" FontSize="11"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
                                 </GridView>
                             </ListView.View>
                         </ListView>
@@ -321,37 +352,77 @@
                     <StackPanel Grid.Column="1"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
-                               Orientation="Vertical">
-                        <TextBlock Text="{Binding StatusMessage, FallbackValue='Ready'}"
-                                  FontSize="14"
-                                  FontWeight="Medium"
-                                  HorizontalAlignment="Center"/>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
-                            <materialDesign:PackIcon Kind="Loading"
-                                                    Width="16" Height="16"
-                                                    VerticalAlignment="Center"
-                                                    Margin="0,0,6,0"
-                                                    Visibility="{Binding IsBuffering, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <materialDesign:PackIcon.RenderTransform>
-                                    <RotateTransform/>
-                                </materialDesign:PackIcon.RenderTransform>
-                                <materialDesign:PackIcon.Triggers>
-                                    <EventTrigger RoutedEvent="Loaded">
-                                        <BeginStoryboard>
-                                            <Storyboard>
-                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
-                                                               From="0" To="360" Duration="0:0:2" RepeatBehavior="Forever"/>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </EventTrigger>
-                                </materialDesign:PackIcon.Triggers>
-                            </materialDesign:PackIcon>
-                            <TextBlock Text="{Binding IsBuffering, Converter={StaticResource BoolToBufferingConverter}}"
+                               Orientation="Horizontal"
+                               Visibility="{Binding CurrentlyPlayingStation, Converter={StaticResource NullToVisibilityConverter}}">
+
+                        <!-- Station Logo/Favicon -->
+                        <Border Width="48" Height="48"
+                                CornerRadius="4"
+                                Background="{DynamicResource MaterialDesignDivider}"
+                                Margin="0,0,12,0"
+                                VerticalAlignment="Center">
+                            <Image x:Name="CurrentStationLogoImage"
+                                   Stretch="UniformToFill"
+                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                        </Border>
+
+                        <!-- Station Info -->
+                        <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                            <!-- Station Name -->
+                            <TextBlock Text="{Binding CurrentlyPlayingStation.Name}"
+                                      FontSize="14"
+                                      FontWeight="Bold"
+                                      HorizontalAlignment="Left"
+                                      MaxWidth="300"
+                                      TextTrimming="CharacterEllipsis"/>
+
+                            <!-- Now Playing Metadata -->
+                            <TextBlock Text="{Binding NowPlaying, FallbackValue=''}"
                                       FontSize="12"
-                                      Foreground="{DynamicResource SecondaryHueMidBrush}"
-                                      FontWeight="Bold"/>
+                                      Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                      HorizontalAlignment="Left"
+                                      Margin="0,2,0,0"
+                                      MaxWidth="300"
+                                      TextTrimming="CharacterEllipsis"
+                                      Visibility="{Binding NowPlaying, Converter={StaticResource NullToVisibilityConverter}}"/>
+
+                            <!-- Buffering Indicator -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,4,0,0"
+                                       Visibility="{Binding IsBuffering, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <materialDesign:PackIcon Kind="Loading"
+                                                        Width="14" Height="14"
+                                                        VerticalAlignment="Center"
+                                                        Margin="0,0,6,0">
+                                    <materialDesign:PackIcon.RenderTransform>
+                                        <RotateTransform/>
+                                    </materialDesign:PackIcon.RenderTransform>
+                                    <materialDesign:PackIcon.Triggers>
+                                        <EventTrigger RoutedEvent="Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                   From="0" To="360" Duration="0:0:2" RepeatBehavior="Forever"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </materialDesign:PackIcon.Triggers>
+                                </materialDesign:PackIcon>
+                                <TextBlock Text="Buffering..."
+                                          FontSize="11"
+                                          Foreground="{DynamicResource SecondaryHueMidBrush}"
+                                          FontWeight="SemiBold"/>
+                            </StackPanel>
                         </StackPanel>
                     </StackPanel>
+
+                    <!-- Default Status (when nothing is playing) -->
+                    <TextBlock Grid.Column="1"
+                              Text="{Binding StatusMessage, FallbackValue='Ready'}"
+                              FontSize="14"
+                              FontWeight="Medium"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Visibility="{Binding CurrentlyPlayingStation, Converter={StaticResource InverseNullToVisibilityConverter}}"/>
 
                     <!-- Volume Control -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
