@@ -118,24 +118,39 @@
 
                         <TextBox materialDesign:HintAssist.Hint="Country"
                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                Text="{Binding CountryFilter, UpdateSourceTrigger=PropertyChanged}"
                                 Margin="0,0,0,12"/>
 
                         <TextBox materialDesign:HintAssist.Hint="Language"
                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                Text="{Binding LanguageFilter, UpdateSourceTrigger=PropertyChanged}"
                                 Margin="0,0,0,12"/>
 
                         <TextBox materialDesign:HintAssist.Hint="Genre"
                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                Text="{Binding GenreFilter, UpdateSourceTrigger=PropertyChanged}"
                                 Margin="0,0,0,12"/>
 
                         <ComboBox materialDesign:HintAssist.Hint="Codec"
                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                 Text="{Binding CodecFilter, UpdateSourceTrigger=PropertyChanged}"
+                                 IsEditable="True"
                                  Margin="0,0,0,12">
-                            <ComboBoxItem Content="All"/>
+                            <ComboBoxItem Content=""/>
                             <ComboBoxItem Content="MP3"/>
                             <ComboBoxItem Content="AAC"/>
                             <ComboBoxItem Content="OGG"/>
                         </ComboBox>
+
+                        <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Command="{Binding LoadTopStationsCommand}"
+                                Margin="0,8,0,0"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="FilterOutline" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Apply Filters" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
 
                     </StackPanel>
                 </materialDesign:Card>

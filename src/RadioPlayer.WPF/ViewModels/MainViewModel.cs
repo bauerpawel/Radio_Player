@@ -55,6 +55,18 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _searchText = string.Empty;
 
+    [ObservableProperty]
+    private string _countryFilter = string.Empty;
+
+    [ObservableProperty]
+    private string _languageFilter = string.Empty;
+
+    [ObservableProperty]
+    private string _genreFilter = string.Empty;
+
+    [ObservableProperty]
+    private string _codecFilter = string.Empty;
+
     public MainViewModel()
     {
         // Constructor for design-time support
@@ -87,13 +99,32 @@ public partial class MainViewModel : ObservableObject
         try
         {
             StatusMessage = "Loading top stations...";
-            var stations = await _radioBrowserService.GetTopVotedStationsAsync(limit: 100);
 
-            // Update favorite status for stations that exist in local database
-            await UpdateFavoriteStatusAsync(stations);
+            // If filters are active, use SearchStationsAsync instead
+            if (!string.IsNullOrWhiteSpace(CountryFilter) ||
+                !string.IsNullOrWhiteSpace(LanguageFilter) ||
+                !string.IsNullOrWhiteSpace(GenreFilter) ||
+                !string.IsNullOrWhiteSpace(CodecFilter))
+            {
+                var stations = await _radioBrowserService.SearchStationsAsync(
+                    searchTerm: null,
+                    country: string.IsNullOrWhiteSpace(CountryFilter) ? null : CountryFilter,
+                    language: string.IsNullOrWhiteSpace(LanguageFilter) ? null : LanguageFilter,
+                    tag: string.IsNullOrWhiteSpace(GenreFilter) ? null : GenreFilter,
+                    codec: string.IsNullOrWhiteSpace(CodecFilter) ? null : CodecFilter,
+                    limit: 100);
 
-            Stations = new ObservableCollection<RadioStation>(stations);
-            StatusMessage = $"Loaded {stations.Count} stations";
+                await UpdateFavoriteStatusAsync(stations);
+                Stations = new ObservableCollection<RadioStation>(stations);
+                StatusMessage = $"Loaded {stations.Count} stations with filters";
+            }
+            else
+            {
+                var stations = await _radioBrowserService.GetTopVotedStationsAsync(limit: 100);
+                await UpdateFavoriteStatusAsync(stations);
+                Stations = new ObservableCollection<RadioStation>(stations);
+                StatusMessage = $"Loaded {stations.Count} stations";
+            }
         }
         catch (Exception ex)
         {
@@ -104,12 +135,29 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task SearchStationsAsync()
     {
-        if (_radioBrowserService == null || string.IsNullOrWhiteSpace(SearchText)) return;
+        if (_radioBrowserService == null) return;
+
+        // Allow search with just filters, even without search text
+        if (string.IsNullOrWhiteSpace(SearchText) &&
+            string.IsNullOrWhiteSpace(CountryFilter) &&
+            string.IsNullOrWhiteSpace(LanguageFilter) &&
+            string.IsNullOrWhiteSpace(GenreFilter) &&
+            string.IsNullOrWhiteSpace(CodecFilter))
+        {
+            StatusMessage = "Please enter search text or select filters";
+            return;
+        }
 
         try
         {
             StatusMessage = "Searching...";
-            var stations = await _radioBrowserService.SearchStationsAsync(searchTerm: SearchText);
+            var stations = await _radioBrowserService.SearchStationsAsync(
+                searchTerm: string.IsNullOrWhiteSpace(SearchText) ? null : SearchText,
+                country: string.IsNullOrWhiteSpace(CountryFilter) ? null : CountryFilter,
+                language: string.IsNullOrWhiteSpace(LanguageFilter) ? null : LanguageFilter,
+                tag: string.IsNullOrWhiteSpace(GenreFilter) ? null : GenreFilter,
+                codec: string.IsNullOrWhiteSpace(CodecFilter) ? null : CodecFilter,
+                limit: 100);
 
             // Update favorite status for stations that exist in local database
             await UpdateFavoriteStatusAsync(stations);
@@ -213,8 +261,12 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            StatusMessage = "Loading favorites...";
             var favorites = await _repository.GetFavoriteStationsAsync();
-            FavoriteStations = new ObservableCollection<RadioStation>(favorites);
+            Stations = new ObservableCollection<RadioStation>(favorites);
+            StatusMessage = favorites.Count > 0
+                ? $"Loaded {favorites.Count} favorite stations"
+                : "No favorite stations yet";
         }
         catch (Exception ex)
         {
