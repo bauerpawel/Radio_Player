@@ -4,6 +4,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <!-- TODO: Add icon - Download from https://icon-icons.com/search/icons/radio (ICO format)
          and save as Resources\app.ico, then uncomment the line below -->

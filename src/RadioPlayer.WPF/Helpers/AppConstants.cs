@@ -99,6 +99,11 @@ public static class AppConstants
         /// Maximum recent history items
         /// </summary>
         public const int MaxRecentHistoryItems = 50;
+
+        /// <summary>
+        /// Minimize to system tray instead of taskbar
+        /// </summary>
+        public static bool MinimizeToTray = false;
     }
 
     // HTTP headers for Radio Browser API
