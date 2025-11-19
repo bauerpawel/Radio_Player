@@ -87,6 +87,10 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = "Loading top stations...";
             var stations = await _radioBrowserService.GetTopVotedStationsAsync(limit: 100);
+
+            // Update favorite status for stations that exist in local database
+            await UpdateFavoriteStatusAsync(stations);
+
             Stations = new ObservableCollection<RadioStation>(stations);
             StatusMessage = $"Loaded {stations.Count} stations";
         }
@@ -105,6 +109,10 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = "Searching...";
             var stations = await _radioBrowserService.SearchStationsAsync(searchTerm: SearchText);
+
+            // Update favorite status for stations that exist in local database
+            await UpdateFavoriteStatusAsync(stations);
+
             Stations = new ObservableCollection<RadioStation>(stations);
             StatusMessage = $"Found {stations.Count} stations";
         }
@@ -157,15 +165,38 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            // Ensure station exists in local database before adding to favorites
+            // Stations from Radio Browser API don't have local database ID
+            if (SelectedStation.Id == 0)
+            {
+                // Check if station already exists in database by UUID
+                var existingStation = await _repository.GetStationByUuidAsync(SelectedStation.StationUuid);
+
+                if (existingStation != null)
+                {
+                    // Station exists, use its ID
+                    SelectedStation.Id = existingStation.Id;
+                }
+                else
+                {
+                    // Station doesn't exist, add it to local database first
+                    var newId = await _repository.AddStationAsync(SelectedStation);
+                    SelectedStation.Id = newId;
+                }
+            }
+
+            // Now toggle favorite status
             if (SelectedStation.IsFavorite)
             {
                 await _repository.RemoveFromFavoritesAsync(SelectedStation.Id);
                 SelectedStation.IsFavorite = false;
+                StatusMessage = $"Removed {SelectedStation.Name} from favorites";
             }
             else
             {
                 await _repository.AddToFavoritesAsync(SelectedStation.Id);
                 SelectedStation.IsFavorite = true;
+                StatusMessage = $"Added {SelectedStation.Name} to favorites";
             }
         }
         catch (Exception ex)
@@ -187,6 +218,34 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Error loading favorites: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Updates IsFavorite status and local database ID for stations loaded from API
+    /// </summary>
+    private async Task UpdateFavoriteStatusAsync(List<RadioStation> stations)
+    {
+        if (_repository == null || stations == null || stations.Count == 0) return;
+
+        try
+        {
+            foreach (var station in stations)
+            {
+                // Check if station exists in local database by UUID
+                var existingStation = await _repository.GetStationByUuidAsync(station.StationUuid);
+
+                if (existingStation != null)
+                {
+                    // Station exists in database - update ID and check if it's a favorite
+                    station.Id = existingStation.Id;
+                    station.IsFavorite = await _repository.IsFavoriteAsync(existingStation.Id);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error updating favorite status: {ex.Message}");
         }
     }
 
