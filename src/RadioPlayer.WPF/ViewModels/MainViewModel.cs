@@ -448,6 +448,13 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ShowAbout()
+    {
+        var aboutDialog = new Views.AboutDialog();
+        aboutDialog.ShowDialog();
+    }
+
+    [RelayCommand]
     private void ShowStreamInfo()
     {
         if (_radioPlayer == null) return;

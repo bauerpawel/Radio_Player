@@ -56,6 +56,12 @@
 
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
                         <Button Style="{StaticResource MaterialDesignIconButton}"
+                                Command="{Binding ShowAboutCommand}"
+                                ToolTip="About - Version and repository info"
+                                Margin="8,0">
+                            <materialDesign:PackIcon Kind="InformationVariant"/>
+                        </Button>
+                        <Button Style="{StaticResource MaterialDesignIconButton}"
                                 Command="{Binding OpenSettingsCommand}"
                                 ToolTip="Settings - Configure buffer sizes"
                                 Margin="8,0">

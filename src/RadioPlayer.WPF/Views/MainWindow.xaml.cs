@@ -1,9 +1,12 @@
 using System;
 using System.ComponentModel;
+using System.Drawing;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using RadioPlayer.WPF.Helpers;
 using RadioPlayer.WPF.ViewModels;
+using Forms = System.Windows.Forms;
 
 namespace RadioPlayer.WPF.Views;
 
@@ -13,6 +16,8 @@ namespace RadioPlayer.WPF.Views;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel;
+    private Forms.NotifyIcon? _notifyIcon;
+    private bool _isClosing = false;
 
     public MainWindow(MainViewModel viewModel)
     {
@@ -22,6 +27,13 @@ public partial class MainWindow : Window
 
         // Subscribe to property changes for station logo updates
         _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+
+        // Initialize system tray icon
+        InitializeNotifyIcon();
+
+        // Handle window state changes for minimize to tray
+        StateChanged += MainWindow_StateChanged;
+        Closing += MainWindow_Closing;
 
         // Load top stations on startup
         Loaded += (s, e) =>
@@ -74,6 +86,82 @@ public partial class MainWindow : Window
         if (_viewModel.PlayStationCommand.CanExecute(null))
         {
             _viewModel.PlayStationCommand.Execute(null);
+        }
+    }
+
+    private void InitializeNotifyIcon()
+    {
+        _notifyIcon = new Forms.NotifyIcon
+        {
+            // Use a generic icon for now (can be replaced with custom icon later)
+            Icon = SystemIcons.Application,
+            Text = "Radio Player",
+            Visible = false
+        };
+
+        // Create context menu for tray icon
+        var contextMenu = new Forms.ContextMenuStrip();
+
+        var restoreMenuItem = new Forms.ToolStripMenuItem("Restore", null, (s, e) => RestoreWindow());
+        var exitMenuItem = new Forms.ToolStripMenuItem("Exit", null, (s, e) => ExitApplication());
+
+        contextMenu.Items.Add(restoreMenuItem);
+        contextMenu.Items.Add(new Forms.ToolStripSeparator());
+        contextMenu.Items.Add(exitMenuItem);
+
+        _notifyIcon.ContextMenuStrip = contextMenu;
+
+        // Double-click to restore
+        _notifyIcon.DoubleClick += (s, e) => RestoreWindow();
+    }
+
+    private void MainWindow_StateChanged(object? sender, EventArgs e)
+    {
+        // Only minimize to tray if the setting is enabled
+        if (WindowState == WindowState.Minimized && AppConstants.UI.MinimizeToTray)
+        {
+            Hide();
+            if (_notifyIcon != null)
+            {
+                _notifyIcon.Visible = true;
+                _notifyIcon.ShowBalloonTip(2000, "Radio Player", "Application minimized to tray", Forms.ToolTipIcon.Info);
+            }
+        }
+    }
+
+    private void RestoreWindow()
+    {
+        Show();
+        WindowState = WindowState.Normal;
+        Activate();
+        if (_notifyIcon != null)
+        {
+            _notifyIcon.Visible = false;
+        }
+    }
+
+    private void ExitApplication()
+    {
+        _isClosing = true;
+        Close();
+    }
+
+    private void MainWindow_Closing(object? sender, CancelEventArgs e)
+    {
+        // If minimize to tray is enabled and user clicks X, minimize instead of closing
+        if (!_isClosing && AppConstants.UI.MinimizeToTray)
+        {
+            e.Cancel = true;
+            WindowState = WindowState.Minimized;
+        }
+        else
+        {
+            // Clean up notify icon
+            if (_notifyIcon != null)
+            {
+                _notifyIcon.Visible = false;
+                _notifyIcon.Dispose();
+            }
         }
     }
 }
