@@ -398,36 +398,8 @@ public class NAudioRadioPlayer : IRadioPlayer
             {
                 _mp3Accumulator.Position = 0;
 
-                // Use MediaFoundationReader for MP3 (more stable than Mp3FileReader for streaming)
-                try
-                {
-                    using var reader = new StreamMediaFoundationReader(_mp3Accumulator);
-
-                    // Initialize playback on first successful read
-                    if (_bufferedWaveProvider == null)
-                    {
-                        InitializePlayback(reader.WaveFormat);
-                    }
-
-                    // Read and buffer audio data
-                    var buffer = new byte[AppConstants.AudioBuffer.ChunkSize];
-                    int bytesRead;
-
-                    while ((bytesRead = reader.Read(buffer, 0, buffer.Length)) > 0 && !cancellationToken.IsCancellationRequested)
-                    {
-                        if (_bufferedWaveProvider != null)
-                        {
-                            _bufferedWaveProvider.AddSamples(buffer, 0, bytesRead);
-                        }
-                    }
-
-                    ReportProgress();
-                    await HandleBufferingAsync(cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[RadioPlayer] MP3 MediaFoundation error: {ex.Message}");
-                }
+                // Use same approach as OGG/AAC - ProcessAudioStreamAsync handles buffering properly
+                await ProcessAudioStreamAsync(_mp3Accumulator, "MP3", cancellationToken);
 
                 // Clear accumulator for next batch
                 _mp3Accumulator.SetLength(0);
@@ -523,7 +495,8 @@ public class NAudioRadioPlayer : IRadioPlayer
             {
                 case "MP3":
                 case "MPEG":
-                    reader = new Mp3FileReader(audioStream);
+                    // Use Media Foundation for MP3 (more stable for streaming than Mp3FileReader)
+                    reader = new StreamMediaFoundationReader(audioStream);
                     break;
 
                 case "AAC":
@@ -540,9 +513,9 @@ public class NAudioRadioPlayer : IRadioPlayer
                     break;
 
                 default:
-                    // Try MP3 as fallback
-                    System.Diagnostics.Debug.WriteLine($"[RadioPlayer] Unknown codec '{codec}', trying MP3");
-                    reader = new Mp3FileReader(audioStream);
+                    // Try Media Foundation as fallback (works for most formats)
+                    System.Diagnostics.Debug.WriteLine($"[RadioPlayer] Unknown codec '{codec}', trying Media Foundation");
+                    reader = new StreamMediaFoundationReader(audioStream);
                     break;
             }
 
