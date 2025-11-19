@@ -68,6 +68,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _codecFilter = string.Empty;
 
+    [ObservableProperty]
+    private ObservableCollection<string> _availableCountries = new();
+
     public MainViewModel()
     {
         // Constructor for design-time support
@@ -90,6 +93,34 @@ public partial class MainViewModel : ObservableObject
             _radioPlayer.ProgressUpdated += OnProgressUpdated;
             _radioPlayer.ErrorOccurred += OnErrorOccurred;
         }
+
+        // Load available countries for the filter
+        _ = LoadAvailableCountriesAsync();
+    }
+
+    [RelayCommand]
+    private async Task LoadAvailableCountriesAsync()
+    {
+        if (_radioBrowserService == null) return;
+
+        try
+        {
+            var countries = await _radioBrowserService.GetCountriesAsync();
+
+            // Add empty option for "All countries"
+            AvailableCountries.Clear();
+            AvailableCountries.Add("");
+
+            foreach (var country in countries)
+            {
+                AvailableCountries.Add(country);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading countries: {ex.Message}");
+            // Fail silently - user can still type country name manually
+        }
     }
 
     [RelayCommand]
@@ -109,7 +140,7 @@ public partial class MainViewModel : ObservableObject
             {
                 var stations = await _radioBrowserService.SearchStationsAsync(
                     searchTerm: null,
-                    country: NormalizeFilter(CountryFilter),
+                    country: string.IsNullOrWhiteSpace(CountryFilter) ? null : CountryFilter.Trim(),
                     language: NormalizeFilter(LanguageFilter),
                     tag: NormalizeFilter(GenreFilter),
                     codec: NormalizeFilter(CodecFilter),
@@ -156,7 +187,7 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = "Searching...";
             var stations = await _radioBrowserService.SearchStationsAsync(
                 searchTerm: NormalizeFilter(SearchText),
-                country: NormalizeFilter(CountryFilter),
+                country: string.IsNullOrWhiteSpace(CountryFilter) ? null : CountryFilter.Trim(),
                 language: NormalizeFilter(LanguageFilter),
                 tag: NormalizeFilter(GenreFilter),
                 codec: NormalizeFilter(CodecFilter),
