@@ -13,7 +13,7 @@ A modern desktop radio player built with .NET 10 and WPF, providing access to 51
 ![Radio Player](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
 ![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)
 ![Platform](https://img.shields.io/badge/Platform-Windows-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
+![License](https://img.shields.io/badge/License-Apache--2.0-blue)
 
 ## 🎵 Features
 
@@ -178,7 +178,7 @@ Based on comprehensive research for optimal performance and reliability:
 Radio_Player/
 ├── RadioPlayer.sln                          # Visual Studio solution
 ├── README.md                                # This file
-├── LICENSE                                  # MIT License
+├── LICENSE                                  # Apache-2.0 License
 └── src/RadioPlayer.WPF/
     ├── Models/                              # Domain models
     │   ├── RadioStation.cs                 # Radio station model
@@ -437,7 +437,7 @@ When contributing:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
@@ -704,7 +704,7 @@ Po zbudowaniu, plik `RadioPlayer.exe` może być dystrybuowany na inne komputery
 
 ## 📄 Licencja
 
-Ten projekt jest licencjonowany na licencji MIT - zobacz plik [LICENSE](LICENSE) po szczegóły.
+Ten projekt jest licencjonowany na licencji Apache-2.0 - zobacz plik [LICENSE](LICENSE) po szczegóły.
 
 ## 📞 Wsparcie
 
