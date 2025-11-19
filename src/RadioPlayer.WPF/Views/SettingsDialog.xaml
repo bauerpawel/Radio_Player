@@ -15,51 +15,53 @@
 
         <TextBlock Grid.Row="0" Text="Buffer Settings" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
 
-        <StackPanel Grid.Row="1">
-            <TextBlock Text="Adjust buffer sizes if you experience stuttering or playback issues."
-                      TextWrapping="Wrap" Foreground="{DynamicResource MaterialDesignBodyLight}" Margin="0,0,0,10"/>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="Adjust buffer sizes if you experience stuttering or playback issues."
+                          TextWrapping="Wrap" Foreground="{DynamicResource MaterialDesignBodyLight}" Margin="0,0,0,10"/>
 
-            <!-- Total Buffer Duration -->
-            <StackPanel Margin="0,0,0,15">
-                <DockPanel Margin="0,0,0,5">
-                    <TextBlock Text="Total Buffer Duration (seconds)" DockPanel.Dock="Left" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding ElementName=BufferSlider, Path=Value, StringFormat='{}{0:F1}s'}"
-                              DockPanel.Dock="Right" VerticalAlignment="Center" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-                </DockPanel>
-                <Slider x:Name="BufferSlider"
-                       Minimum="3" Maximum="30" Value="10"
-                       TickFrequency="1" IsSnapToTickEnabled="True"
-                       Style="{StaticResource MaterialDesignDiscreteSlider}"/>
-                <TextBlock Text="Higher values = smoother playback, more latency" FontSize="11" Foreground="Gray" Margin="0,5,0,0"/>
+                <!-- Total Buffer Duration -->
+                <StackPanel Margin="0,0,0,15">
+                    <DockPanel Margin="0,0,0,5">
+                        <TextBlock Text="Total Buffer Duration (seconds)" DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ElementName=BufferSlider, Path=Value, StringFormat='{}{0:F1}s'}"
+                                  DockPanel.Dock="Right" VerticalAlignment="Center" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                    </DockPanel>
+                    <Slider x:Name="BufferSlider"
+                           Minimum="3" Maximum="30" Value="10"
+                           TickFrequency="1" IsSnapToTickEnabled="True"
+                           Style="{StaticResource MaterialDesignDiscreteSlider}"/>
+                    <TextBlock Text="Higher values = smoother playback, more latency" FontSize="11" Foreground="Gray" Margin="0,5,0,0"/>
+                </StackPanel>
+
+                <!-- Pre-Buffer Duration -->
+                <StackPanel Margin="0,0,0,15">
+                    <DockPanel Margin="0,0,0,5">
+                        <TextBlock Text="Pre-Buffer Duration (seconds)" DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ElementName=PreBufferSlider, Path=Value, StringFormat='{}{0:F1}s'}"
+                                  DockPanel.Dock="Right" VerticalAlignment="Center" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                    </DockPanel>
+                    <Slider x:Name="PreBufferSlider"
+                           Minimum="1" Maximum="10" Value="3"
+                           TickFrequency="0.5" IsSnapToTickEnabled="True"
+                           Style="{StaticResource MaterialDesignDiscreteSlider}"/>
+                    <TextBlock Text="How much data to buffer before starting playback" FontSize="11" Foreground="Gray" Margin="0,5,0,0"/>
+                </StackPanel>
+
+                <TextBlock Text="💡 Recommended: 10s total buffer, 3s pre-buffer"
+                          FontSize="12" FontStyle="Italic" Foreground="{DynamicResource SecondaryHueMidBrush}" Margin="0,10,0,0"/>
+
+                <Separator Margin="0,20"/>
+
+                <!-- Debug Logging -->
+                <TextBlock Text="Debug Logging" FontWeight="Bold" FontSize="14" Margin="0,10,0,10"/>
+                <CheckBox x:Name="DebugLoggingCheckBox"
+                         Content="Enable debug logging to file"
+                         Margin="0,0,0,10"/>
+                <TextBlock Text="Logs buffering and playback details to help diagnose issues. File saved to application directory."
+                          TextWrapping="Wrap" FontSize="11" Foreground="Gray" Margin="0,0,0,0"/>
             </StackPanel>
-
-            <!-- Pre-Buffer Duration -->
-            <StackPanel Margin="0,0,0,15">
-                <DockPanel Margin="0,0,0,5">
-                    <TextBlock Text="Pre-Buffer Duration (seconds)" DockPanel.Dock="Left" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding ElementName=PreBufferSlider, Path=Value, StringFormat='{}{0:F1}s'}"
-                              DockPanel.Dock="Right" VerticalAlignment="Center" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-                </DockPanel>
-                <Slider x:Name="PreBufferSlider"
-                       Minimum="1" Maximum="10" Value="3"
-                       TickFrequency="0.5" IsSnapToTickEnabled="True"
-                       Style="{StaticResource MaterialDesignDiscreteSlider}"/>
-                <TextBlock Text="How much data to buffer before starting playback" FontSize="11" Foreground="Gray" Margin="0,5,0,0"/>
-            </StackPanel>
-
-            <TextBlock Text="💡 Recommended: 10s total buffer, 3s pre-buffer"
-                      FontSize="12" FontStyle="Italic" Foreground="{DynamicResource SecondaryHueMidBrush}" Margin="0,10,0,0"/>
-
-            <Separator Margin="0,20"/>
-
-            <!-- Debug Logging -->
-            <TextBlock Text="Debug Logging" FontWeight="Bold" FontSize="14" Margin="0,10,0,10"/>
-            <CheckBox x:Name="DebugLoggingCheckBox"
-                     Content="Enable debug logging to file"
-                     Margin="0,0,0,10"/>
-            <TextBlock Text="Logs buffering and playback details to help diagnose issues. File saved to application directory."
-                      TextWrapping="Wrap" FontSize="11" Foreground="Gray" Margin="0,0,0,0"/>
-        </StackPanel>
+        </ScrollViewer>
 
         <!-- Action Buttons -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
