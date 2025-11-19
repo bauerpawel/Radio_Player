@@ -31,6 +31,26 @@ public interface IRadioPlayer : IDisposable
     RadioStation? CurrentStation { get; }
 
     /// <summary>
+    /// Current buffer duration (how much audio is buffered)
+    /// </summary>
+    TimeSpan BufferedDuration { get; }
+
+    /// <summary>
+    /// Buffer fill percentage (0.0 to 1.0)
+    /// </summary>
+    double BufferFillPercentage { get; }
+
+    /// <summary>
+    /// Sample rate in Hz (0 if not available)
+    /// </summary>
+    int SampleRate { get; }
+
+    /// <summary>
+    /// Number of audio channels (0 if not available)
+    /// </summary>
+    int Channels { get; }
+
+    /// <summary>
     /// Event raised when playback state changes
     /// </summary>
     event EventHandler<PlaybackState>? PlaybackStateChanged;

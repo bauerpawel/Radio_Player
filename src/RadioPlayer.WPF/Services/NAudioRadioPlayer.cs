@@ -83,6 +83,27 @@ public class NAudioRadioPlayer : IRadioPlayer
 
     public RadioStation? CurrentStation => _currentStation;
 
+    public TimeSpan BufferedDuration => _bufferedWaveProvider?.BufferedDuration ?? TimeSpan.Zero;
+
+    public double BufferFillPercentage
+    {
+        get
+        {
+            if (_bufferedWaveProvider == null)
+                return 0;
+
+            var targetBuffer = AppConstants.AudioBuffer.BufferDuration;
+            if (targetBuffer.TotalSeconds == 0)
+                return 0;
+
+            return Math.Clamp(_bufferedWaveProvider.BufferedDuration.TotalSeconds / targetBuffer.TotalSeconds, 0, 1);
+        }
+    }
+
+    public int SampleRate => _bufferedWaveProvider?.WaveFormat?.SampleRate ?? 0;
+
+    public int Channels => _bufferedWaveProvider?.WaveFormat?.Channels ?? 0;
+
     public event EventHandler<PlaybackState>? PlaybackStateChanged;
     public event EventHandler<IcyMetadata>? MetadataReceived;
     public event EventHandler<StreamProgress>? ProgressUpdated;

@@ -36,10 +36,40 @@ public partial class StreamInfoDialog : Window
             ? "No metadata available"
             : nowPlaying;
 
-        // Note: Sample Rate and Channels would need to be exposed by IRadioPlayer
-        SampleRateText.Text = "Available during playback";
-        ChannelsText.Text = "Available during playback";
-        BufferText.Text = player.State == Services.PlaybackState.Playing ? "Playing" : "Stopped";
+        // Audio Format Information (from active stream)
+        if (player.SampleRate > 0)
+        {
+            SampleRateText.Text = $"{player.SampleRate} Hz";
+        }
+        else
+        {
+            SampleRateText.Text = player.State == Services.PlaybackState.Playing || player.State == Services.PlaybackState.Buffering
+                ? "Detecting..."
+                : "Not available";
+        }
+
+        if (player.Channels > 0)
+        {
+            ChannelsText.Text = player.Channels == 1 ? "Mono (1 channel)" : $"Stereo ({player.Channels} channels)";
+        }
+        else
+        {
+            ChannelsText.Text = player.State == Services.PlaybackState.Playing || player.State == Services.PlaybackState.Buffering
+                ? "Detecting..."
+                : "Not available";
+        }
+
+        // Buffer Status
+        if (player.State == Services.PlaybackState.Playing || player.State == Services.PlaybackState.Buffering)
+        {
+            var bufferPercentage = (int)(player.BufferFillPercentage * 100);
+            var bufferSeconds = player.BufferedDuration.TotalSeconds;
+            BufferText.Text = $"{bufferPercentage}% ({bufferSeconds:F1}s buffered)";
+        }
+        else
+        {
+            BufferText.Text = "Not active";
+        }
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
