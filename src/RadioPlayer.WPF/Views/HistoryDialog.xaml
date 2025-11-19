@@ -129,7 +129,7 @@
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
 
-                            <GridViewColumn Header="Date & Time" Width="180">
+                            <GridViewColumn Header="Date &amp; Time" Width="180">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel>
