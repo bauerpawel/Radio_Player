@@ -28,6 +28,12 @@ public partial class MainViewModel : ObservableObject
     private RadioStation? _selectedStation;
 
     [ObservableProperty]
+    private RadioStation? _currentlyPlayingStation;
+
+    [ObservableProperty]
+    private string _currentTrack = "No track information";
+
+    [ObservableProperty]
     private string _nowPlaying = "Select a station to start playing";
 
     [ObservableProperty]
@@ -81,6 +87,10 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = "Loading top stations...";
             var stations = await _radioBrowserService.GetTopVotedStationsAsync(limit: 100);
+
+            // Update favorite status for stations that exist in local database
+            await UpdateFavoriteStatusAsync(stations);
+
             Stations = new ObservableCollection<RadioStation>(stations);
             StatusMessage = $"Loaded {stations.Count} stations";
         }
@@ -99,6 +109,10 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = "Searching...";
             var stations = await _radioBrowserService.SearchStationsAsync(searchTerm: SearchText);
+
+            // Update favorite status for stations that exist in local database
+            await UpdateFavoriteStatusAsync(stations);
+
             Stations = new ObservableCollection<RadioStation>(stations);
             StatusMessage = $"Found {stations.Count} stations";
         }
@@ -116,6 +130,8 @@ public partial class MainViewModel : ObservableObject
         try
         {
             StatusMessage = "Connecting...";
+            CurrentlyPlayingStation = SelectedStation;
+            CurrentTrack = "Loading...";
             await _radioPlayer.PlayAsync(SelectedStation);
 
             // Register click with Radio Browser API
@@ -127,6 +143,8 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Error playing: {ex.Message}";
+            CurrentlyPlayingStation = null;
+            CurrentTrack = "No track information";
         }
     }
 
@@ -135,6 +153,8 @@ public partial class MainViewModel : ObservableObject
     {
         _radioPlayer?.Stop();
         StatusMessage = "Stopped";
+        CurrentlyPlayingStation = null;
+        CurrentTrack = "No track information";
         NowPlaying = "Select a station to start playing";
     }
 
@@ -145,15 +165,38 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            // Ensure station exists in local database before adding to favorites
+            // Stations from Radio Browser API don't have local database ID
+            if (SelectedStation.Id == 0)
+            {
+                // Check if station already exists in database by UUID
+                var existingStation = await _repository.GetStationByUuidAsync(SelectedStation.StationUuid);
+
+                if (existingStation != null)
+                {
+                    // Station exists, use its ID
+                    SelectedStation.Id = existingStation.Id;
+                }
+                else
+                {
+                    // Station doesn't exist, add it to local database first
+                    var newId = await _repository.AddStationAsync(SelectedStation);
+                    SelectedStation.Id = newId;
+                }
+            }
+
+            // Now toggle favorite status
             if (SelectedStation.IsFavorite)
             {
                 await _repository.RemoveFromFavoritesAsync(SelectedStation.Id);
                 SelectedStation.IsFavorite = false;
+                StatusMessage = $"Removed {SelectedStation.Name} from favorites";
             }
             else
             {
                 await _repository.AddToFavoritesAsync(SelectedStation.Id);
                 SelectedStation.IsFavorite = true;
+                StatusMessage = $"Added {SelectedStation.Name} to favorites";
             }
         }
         catch (Exception ex)
@@ -178,6 +221,34 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Updates IsFavorite status and local database ID for stations loaded from API
+    /// </summary>
+    private async Task UpdateFavoriteStatusAsync(List<RadioStation> stations)
+    {
+        if (_repository == null || stations == null || stations.Count == 0) return;
+
+        try
+        {
+            foreach (var station in stations)
+            {
+                // Check if station exists in local database by UUID
+                var existingStation = await _repository.GetStationByUuidAsync(station.StationUuid);
+
+                if (existingStation != null)
+                {
+                    // Station exists in database - update ID and check if it's a favorite
+                    station.Id = existingStation.Id;
+                    station.IsFavorite = await _repository.IsFavoriteAsync(existingStation.Id);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error updating favorite status: {ex.Message}");
+        }
+    }
+
     // Event handlers for RadioPlayer events
     private void OnPlaybackStateChanged(object? sender, PlaybackState state)
     {
@@ -198,6 +269,7 @@ public partial class MainViewModel : ObservableObject
 
     private void OnMetadataReceived(object? sender, IcyMetadata metadata)
     {
+        CurrentTrack = metadata.ToString();
         NowPlaying = metadata.ToString();
     }
 
@@ -213,6 +285,8 @@ public partial class MainViewModel : ObservableObject
     {
         StatusMessage = $"Error: {ex.Message}";
         IsPlaying = false;
+        CurrentlyPlayingStation = null;
+        CurrentTrack = "No track information";
     }
 
     partial void OnVolumeChanged(float value)
