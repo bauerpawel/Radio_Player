@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -108,14 +109,15 @@ public partial class MainViewModel : ObservableObject
             {
                 var stations = await _radioBrowserService.SearchStationsAsync(
                     searchTerm: null,
-                    country: string.IsNullOrWhiteSpace(CountryFilter) ? null : CountryFilter,
-                    language: string.IsNullOrWhiteSpace(LanguageFilter) ? null : LanguageFilter,
-                    tag: string.IsNullOrWhiteSpace(GenreFilter) ? null : GenreFilter,
-                    codec: string.IsNullOrWhiteSpace(CodecFilter) ? null : CodecFilter,
+                    country: NormalizeFilter(CountryFilter),
+                    language: NormalizeFilter(LanguageFilter),
+                    tag: NormalizeFilter(GenreFilter),
+                    codec: NormalizeFilter(CodecFilter),
                     limit: 100);
 
                 await UpdateFavoriteStatusAsync(stations);
                 Stations = new ObservableCollection<RadioStation>(stations);
+                UpdateCurrentlyPlayingStationReference();
                 StatusMessage = $"Loaded {stations.Count} stations with filters";
             }
             else
@@ -123,6 +125,7 @@ public partial class MainViewModel : ObservableObject
                 var stations = await _radioBrowserService.GetTopVotedStationsAsync(limit: 100);
                 await UpdateFavoriteStatusAsync(stations);
                 Stations = new ObservableCollection<RadioStation>(stations);
+                UpdateCurrentlyPlayingStationReference();
                 StatusMessage = $"Loaded {stations.Count} stations";
             }
         }
@@ -152,17 +155,18 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = "Searching...";
             var stations = await _radioBrowserService.SearchStationsAsync(
-                searchTerm: string.IsNullOrWhiteSpace(SearchText) ? null : SearchText,
-                country: string.IsNullOrWhiteSpace(CountryFilter) ? null : CountryFilter,
-                language: string.IsNullOrWhiteSpace(LanguageFilter) ? null : LanguageFilter,
-                tag: string.IsNullOrWhiteSpace(GenreFilter) ? null : GenreFilter,
-                codec: string.IsNullOrWhiteSpace(CodecFilter) ? null : CodecFilter,
+                searchTerm: NormalizeFilter(SearchText),
+                country: NormalizeFilter(CountryFilter),
+                language: NormalizeFilter(LanguageFilter),
+                tag: NormalizeFilter(GenreFilter),
+                codec: NormalizeFilter(CodecFilter),
                 limit: 100);
 
             // Update favorite status for stations that exist in local database
             await UpdateFavoriteStatusAsync(stations);
 
             Stations = new ObservableCollection<RadioStation>(stations);
+            UpdateCurrentlyPlayingStationReference();
             StatusMessage = $"Found {stations.Count} stations";
         }
         catch (Exception ex)
@@ -264,6 +268,7 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = "Loading favorites...";
             var favorites = await _repository.GetFavoriteStationsAsync();
             Stations = new ObservableCollection<RadioStation>(favorites);
+            UpdateCurrentlyPlayingStationReference();
             StatusMessage = favorites.Count > 0
                 ? $"Loaded {favorites.Count} favorite stations"
                 : "No favorite stations yet";
@@ -299,6 +304,37 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error updating favorite status: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Normalizes filter text for case-insensitive API searches
+    /// </summary>
+    private static string? NormalizeFilter(string? filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter))
+            return null;
+
+        return filter.Trim().ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Updates CurrentlyPlayingStation reference to match the new station instance in the list
+    /// This is needed because when we reload stations, we get new object instances
+    /// but we want to keep the same station selected (by UUID) for the playing indicator
+    /// </summary>
+    private void UpdateCurrentlyPlayingStationReference()
+    {
+        if (CurrentlyPlayingStation == null || Stations == null || Stations.Count == 0)
+            return;
+
+        // Find the station in the new list that matches the currently playing station by UUID
+        var matchingStation = Stations.FirstOrDefault(s => s.StationUuid == CurrentlyPlayingStation.StationUuid);
+
+        if (matchingStation != null)
+        {
+            // Update to the new instance so the visual indicator works
+            CurrentlyPlayingStation = matchingStation;
         }
     }
 
