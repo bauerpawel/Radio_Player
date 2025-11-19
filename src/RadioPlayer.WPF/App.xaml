@@ -13,6 +13,9 @@
 
             <!-- Value Converters -->
             <converters:NullToBooleanConverter x:Key="NullToBooleanConverter"/>
+            <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+            <converters:InverseNullToVisibilityConverter x:Key="InverseNullToVisibilityConverter"/>
+            <converters:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter"/>
             <converters:BoolToBufferingConverter x:Key="BoolToBufferingConverter"/>
             <converters:VolumeConverter x:Key="VolumeConverter"/>
             <converters:VolumePercentConverter x:Key="VolumePercentConverter"/>

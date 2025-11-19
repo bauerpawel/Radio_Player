@@ -34,8 +34,23 @@
                         <materialDesign:PackIcon Kind="Radio" Width="32" Height="32" VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="Radio Player" FontSize="20" FontWeight="Medium"/>
-                            <TextBlock Text="{Binding NowPlaying, FallbackValue='Select a station to start playing'}"
-                                      FontSize="13" Opacity="0.8" TextTrimming="CharacterEllipsis"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <materialDesign:PackIcon Kind="PlayCircle"
+                                                        Width="16" Height="16"
+                                                        VerticalAlignment="Center"
+                                                        Margin="0,0,6,0"
+                                                        Visibility="{Binding CurrentlyPlayingStation, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                <TextBlock VerticalAlignment="Center" Opacity="0.9">
+                                    <Run Text="{Binding CurrentlyPlayingStation.Name, Mode=OneWay}" FontWeight="Medium"/>
+                                    <Run Text=" • " Foreground="{DynamicResource PrimaryHueLightBrush}"/>
+                                    <Run Text="{Binding CurrentTrack, Mode=OneWay}"/>
+                                </TextBlock>
+                            </StackPanel>
+                            <TextBlock Text="Select a station to start playing"
+                                      FontSize="12"
+                                      Opacity="0.7"
+                                      TextTrimming="CharacterEllipsis"
+                                      Visibility="{Binding CurrentlyPlayingStation, Converter={StaticResource InverseNullToVisibilityConverter}}"/>
                         </StackPanel>
                     </StackPanel>
 
@@ -174,6 +189,20 @@
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
+                                                    <!-- Playing indicator - shown only for currently playing station -->
+                                                    <materialDesign:PackIcon Kind="VolumeHigh"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="0,0,8,0"
+                                                                            Foreground="#4CAF50">
+                                                        <materialDesign:PackIcon.Visibility>
+                                                            <MultiBinding Converter="{StaticResource EqualityToVisibilityConverter}">
+                                                                <Binding Path="."/>
+                                                                <Binding Path="DataContext.CurrentlyPlayingStation" RelativeSource="{RelativeSource AncestorType=ListView}"/>
+                                                            </MultiBinding>
+                                                        </materialDesign:PackIcon.Visibility>
+                                                    </materialDesign:PackIcon>
+
+                                                    <!-- Radio icon - shown for all stations -->
                                                     <materialDesign:PackIcon Kind="Radio"
                                                                             VerticalAlignment="Center"
                                                                             Margin="0,0,8,0"

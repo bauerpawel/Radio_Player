@@ -28,6 +28,12 @@ public partial class MainViewModel : ObservableObject
     private RadioStation? _selectedStation;
 
     [ObservableProperty]
+    private RadioStation? _currentlyPlayingStation;
+
+    [ObservableProperty]
+    private string _currentTrack = "No track information";
+
+    [ObservableProperty]
     private string _nowPlaying = "Select a station to start playing";
 
     [ObservableProperty]
@@ -116,6 +122,8 @@ public partial class MainViewModel : ObservableObject
         try
         {
             StatusMessage = "Connecting...";
+            CurrentlyPlayingStation = SelectedStation;
+            CurrentTrack = "Loading...";
             await _radioPlayer.PlayAsync(SelectedStation);
 
             // Register click with Radio Browser API
@@ -127,6 +135,8 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Error playing: {ex.Message}";
+            CurrentlyPlayingStation = null;
+            CurrentTrack = "No track information";
         }
     }
 
@@ -135,6 +145,8 @@ public partial class MainViewModel : ObservableObject
     {
         _radioPlayer?.Stop();
         StatusMessage = "Stopped";
+        CurrentlyPlayingStation = null;
+        CurrentTrack = "No track information";
         NowPlaying = "Select a station to start playing";
     }
 
@@ -198,6 +210,7 @@ public partial class MainViewModel : ObservableObject
 
     private void OnMetadataReceived(object? sender, IcyMetadata metadata)
     {
+        CurrentTrack = metadata.ToString();
         NowPlaying = metadata.ToString();
     }
 
@@ -213,6 +226,8 @@ public partial class MainViewModel : ObservableObject
     {
         StatusMessage = $"Error: {ex.Message}";
         IsPlaying = false;
+        CurrentlyPlayingStation = null;
+        CurrentTrack = "No track information";
     }
 
     partial void OnVolumeChanged(float value)
