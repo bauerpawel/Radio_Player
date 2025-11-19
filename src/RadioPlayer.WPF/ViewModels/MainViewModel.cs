@@ -442,4 +442,20 @@ public partial class MainViewModel : ObservableObject
         var streamInfoDialog = new Views.StreamInfoDialog(SelectedStation, _radioPlayer, NowPlaying);
         streamInfoDialog.ShowDialog();
     }
+
+    [RelayCommand]
+    private async Task ShowStationDetailsAsync(RadioStation? station)
+    {
+        if (station == null) return;
+
+        var detailsDialog = new Views.StationDetailsDialog(station, _radioBrowserService);
+        var result = detailsDialog.ShowDialog();
+
+        // If user clicked "Play Station" or double-clicked a similar station
+        if (result == true && detailsDialog.ShouldPlayStation && detailsDialog.SelectedStation != null)
+        {
+            SelectedStation = detailsDialog.SelectedStation;
+            await PlayStationAsync();
+        }
+    }
 }

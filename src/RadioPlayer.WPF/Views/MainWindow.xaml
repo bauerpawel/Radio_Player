@@ -267,6 +267,27 @@
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
+
+                                    <GridViewColumn Header="Actions" Width="90">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                       Command="{Binding DataContext.ShowStationDetailsCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                                       CommandParameter="{Binding}"
+                                                       Height="28"
+                                                       Padding="8,4"
+                                                       ToolTip="View station details">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <materialDesign:PackIcon Kind="InformationOutline"
+                                                                                Width="16" Height="16"
+                                                                                VerticalAlignment="Center"
+                                                                                Margin="0,0,4,0"/>
+                                                        <TextBlock Text="Details" VerticalAlignment="Center" FontSize="11"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
                                 </GridView>
                             </ListView.View>
                         </ListView>
