@@ -108,10 +108,10 @@ public partial class MainViewModel : ObservableObject
             {
                 var stations = await _radioBrowserService.SearchStationsAsync(
                     searchTerm: null,
-                    country: string.IsNullOrWhiteSpace(CountryFilter) ? null : CountryFilter,
-                    language: string.IsNullOrWhiteSpace(LanguageFilter) ? null : LanguageFilter,
-                    tag: string.IsNullOrWhiteSpace(GenreFilter) ? null : GenreFilter,
-                    codec: string.IsNullOrWhiteSpace(CodecFilter) ? null : CodecFilter,
+                    country: NormalizeFilter(CountryFilter),
+                    language: NormalizeFilter(LanguageFilter),
+                    tag: NormalizeFilter(GenreFilter),
+                    codec: NormalizeFilter(CodecFilter),
                     limit: 100);
 
                 await UpdateFavoriteStatusAsync(stations);
@@ -152,11 +152,11 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = "Searching...";
             var stations = await _radioBrowserService.SearchStationsAsync(
-                searchTerm: string.IsNullOrWhiteSpace(SearchText) ? null : SearchText,
-                country: string.IsNullOrWhiteSpace(CountryFilter) ? null : CountryFilter,
-                language: string.IsNullOrWhiteSpace(LanguageFilter) ? null : LanguageFilter,
-                tag: string.IsNullOrWhiteSpace(GenreFilter) ? null : GenreFilter,
-                codec: string.IsNullOrWhiteSpace(CodecFilter) ? null : CodecFilter,
+                searchTerm: NormalizeFilter(SearchText),
+                country: NormalizeFilter(CountryFilter),
+                language: NormalizeFilter(LanguageFilter),
+                tag: NormalizeFilter(GenreFilter),
+                codec: NormalizeFilter(CodecFilter),
                 limit: 100);
 
             // Update favorite status for stations that exist in local database
@@ -300,6 +300,17 @@ public partial class MainViewModel : ObservableObject
         {
             System.Diagnostics.Debug.WriteLine($"Error updating favorite status: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Normalizes filter text for case-insensitive API searches
+    /// </summary>
+    private static string? NormalizeFilter(string? filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter))
+            return null;
+
+        return filter.Trim().ToLowerInvariant();
     }
 
     // Event handlers for RadioPlayer events
