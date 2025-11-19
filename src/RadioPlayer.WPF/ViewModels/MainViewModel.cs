@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -69,6 +68,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _codecFilter = string.Empty;
 
+    [ObservableProperty]
+    private ObservableCollection<string> _availableCountries = new();
+
     public MainViewModel()
     {
         // Constructor for design-time support
@@ -91,6 +93,34 @@ public partial class MainViewModel : ObservableObject
             _radioPlayer.ProgressUpdated += OnProgressUpdated;
             _radioPlayer.ErrorOccurred += OnErrorOccurred;
         }
+
+        // Load available countries for the filter
+        _ = LoadAvailableCountriesAsync();
+    }
+
+    [RelayCommand]
+    private async Task LoadAvailableCountriesAsync()
+    {
+        if (_radioBrowserService == null) return;
+
+        try
+        {
+            var countries = await _radioBrowserService.GetCountriesAsync();
+
+            // Add empty option for "All countries"
+            AvailableCountries.Clear();
+            AvailableCountries.Add("");
+
+            foreach (var country in countries)
+            {
+                AvailableCountries.Add(country);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading countries: {ex.Message}");
+            // Fail silently - user can still type country name manually
+        }
     }
 
     [RelayCommand]
@@ -110,7 +140,7 @@ public partial class MainViewModel : ObservableObject
             {
                 var stations = await _radioBrowserService.SearchStationsAsync(
                     searchTerm: null,
-                    country: NormalizeCountryFilter(CountryFilter),
+                    country: string.IsNullOrWhiteSpace(CountryFilter) ? null : CountryFilter.Trim(),
                     language: NormalizeFilter(LanguageFilter),
                     tag: NormalizeFilter(GenreFilter),
                     codec: NormalizeFilter(CodecFilter),
@@ -157,7 +187,7 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = "Searching...";
             var stations = await _radioBrowserService.SearchStationsAsync(
                 searchTerm: NormalizeFilter(SearchText),
-                country: NormalizeCountryFilter(CountryFilter),
+                country: string.IsNullOrWhiteSpace(CountryFilter) ? null : CountryFilter.Trim(),
                 language: NormalizeFilter(LanguageFilter),
                 tag: NormalizeFilter(GenreFilter),
                 codec: NormalizeFilter(CodecFilter),
@@ -317,23 +347,6 @@ public partial class MainViewModel : ObservableObject
             return null;
 
         return filter.Trim().ToLowerInvariant();
-    }
-
-    /// <summary>
-    /// Normalizes country name to Title Case (first letter of each word uppercase)
-    /// Radio Browser API requires proper country names: "Poland", "United States", etc.
-    /// Examples: "poland" → "Poland", "united states" → "United States", "POLAND" → "Poland"
-    /// </summary>
-    private static string? NormalizeCountryFilter(string? country)
-    {
-        if (string.IsNullOrWhiteSpace(country))
-            return null;
-
-        var trimmed = country.Trim();
-
-        // ToTitleCase requires lowercase input to work properly with all-caps text
-        var textInfo = CultureInfo.CurrentCulture.TextInfo;
-        return textInfo.ToTitleCase(trimmed.ToLower());
     }
 
     /// <summary>
