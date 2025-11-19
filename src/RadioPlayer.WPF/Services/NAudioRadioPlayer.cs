@@ -34,9 +34,11 @@ public class NAudioRadioPlayer : IRadioPlayer
     private float _volume = AppConstants.UI.DefaultVolume;
     private bool _isMuted;
 
-    // Data accumulators for OGG/AAC streaming
+    // Data accumulators for streaming
+    private MemoryStream? _mp3Accumulator;
     private MemoryStream? _oggAccumulator;
     private MemoryStream? _aacAccumulator;
+    private const int MinimumMp3DataSize = 131072; // 128KB minimum before processing MP3
     private const int MinimumOggDataSize = 65536; // 64KB minimum before processing
     private const int MinimumAacDataSize = 32768; // 32KB minimum before processing
 
@@ -164,6 +166,8 @@ public class NAudioRadioPlayer : IRadioPlayer
         _currentStation = null;
 
         // Clear accumulators
+        _mp3Accumulator?.Dispose();
+        _mp3Accumulator = null;
         _oggAccumulator?.Dispose();
         _oggAccumulator = null;
         _aacAccumulator?.Dispose();
@@ -330,17 +334,15 @@ public class NAudioRadioPlayer : IRadioPlayer
         {
             var codecUpper = codec.ToUpperInvariant();
 
-            // For MP3, parse frames directly from raw data
+            // All codecs use accumulation approach
             if (codecUpper == "MP3" || codecUpper == "MPEG")
             {
-                await ProcessMp3RawDataAsync(audioData, cancellationToken);
+                await ProcessMp3AccumulatedDataAsync(audioData, cancellationToken);
             }
-            // For OGG, accumulate data before processing
             else if (codecUpper == "OGG" || codecUpper == "VORBIS")
             {
                 await ProcessOggAccumulatedDataAsync(audioData, cancellationToken);
             }
-            // For AAC, accumulate data before processing
             else if (codecUpper == "AAC" || codecUpper == "MP4" || codecUpper == "AAC+")
             {
                 await ProcessAacAccumulatedDataAsync(audioData, cancellationToken);
@@ -348,12 +350,75 @@ public class NAudioRadioPlayer : IRadioPlayer
             else
             {
                 // Unknown codec - try MP3 as fallback
-                await ProcessMp3RawDataAsync(audioData, cancellationToken);
+                await ProcessMp3AccumulatedDataAsync(audioData, cancellationToken);
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[RadioPlayer] Raw audio processing error: {ex.Message}");
+        }
+    }
+
+    private async Task ProcessMp3AccumulatedDataAsync(byte[] mp3Data, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Initialize accumulator if needed
+            if (_mp3Accumulator == null)
+            {
+                _mp3Accumulator = new MemoryStream();
+            }
+
+            // Add new data to accumulator
+            await _mp3Accumulator.WriteAsync(mp3Data, 0, mp3Data.Length, cancellationToken);
+
+            // Process when we have enough data (128KB for smooth playback)
+            if (_mp3Accumulator.Length >= MinimumMp3DataSize)
+            {
+                _mp3Accumulator.Position = 0;
+
+                // Use MediaFoundationReader for MP3 (more stable than Mp3FileReader for streaming)
+                try
+                {
+                    using var reader = new StreamMediaFoundationReader(_mp3Accumulator);
+
+                    // Initialize playback on first successful read
+                    if (_bufferedWaveProvider == null)
+                    {
+                        InitializePlayback(reader.WaveFormat);
+                    }
+
+                    // Read and buffer audio data
+                    var buffer = new byte[AppConstants.AudioBuffer.ChunkSize];
+                    int bytesRead;
+
+                    while ((bytesRead = reader.Read(buffer, 0, buffer.Length)) > 0 && !cancellationToken.IsCancellationRequested)
+                    {
+                        if (_bufferedWaveProvider != null)
+                        {
+                            _bufferedWaveProvider.AddSamples(buffer, 0, bytesRead);
+                        }
+                    }
+
+                    ReportProgress();
+                    await HandleBufferingAsync(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[RadioPlayer] MP3 MediaFoundation error: {ex.Message}");
+                }
+
+                // Clear accumulator for next batch
+                _mp3Accumulator.SetLength(0);
+                _mp3Accumulator.Position = 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] MP3 accumulation error: {ex.Message}");
+            // Reset accumulator on error
+            _mp3Accumulator?.Dispose();
+            _mp3Accumulator = null;
         }
     }
 
@@ -420,72 +485,6 @@ public class NAudioRadioPlayer : IRadioPlayer
             // Reset accumulator on error
             _aacAccumulator?.Dispose();
             _aacAccumulator = null;
-        }
-    }
-
-    private async Task ProcessMp3RawDataAsync(byte[] mp3Data, CancellationToken cancellationToken)
-    {
-        try
-        {
-            using var memStream = new MemoryStream(mp3Data);
-
-            // Parse all MP3 frames from the data
-            while (memStream.Position < memStream.Length && !cancellationToken.IsCancellationRequested)
-            {
-                Mp3Frame? frame = null;
-                try
-                {
-                    frame = Mp3Frame.LoadFromStream(memStream);
-                }
-                catch
-                {
-                    // Skip invalid data
-                    break;
-                }
-
-                if (frame == null)
-                    break;
-
-                // Initialize playback on first frame
-                if (_bufferedWaveProvider == null)
-                {
-                    var waveFormat = new Mp3WaveFormat(
-                        frame.SampleRate,
-                        frame.ChannelMode == ChannelMode.Mono ? 1 : 2,
-                        frame.FrameLength,
-                        frame.BitRate);
-
-                    InitializePlayback(waveFormat);
-                }
-
-                // Decompress and add to buffer
-                if (_bufferedWaveProvider != null)
-                {
-                    var decompressor = new AcmMp3FrameDecompressor(new Mp3WaveFormat(
-                        frame.SampleRate,
-                        frame.ChannelMode == ChannelMode.Mono ? 1 : 2,
-                        frame.FrameLength,
-                        frame.BitRate));
-
-                    var decompressed = new byte[16384 * 4]; // Larger buffer
-                    int decompressedBytes = decompressor.DecompressFrame(frame, decompressed, 0);
-
-                    if (decompressedBytes > 0)
-                    {
-                        _bufferedWaveProvider.AddSamples(decompressed, 0, decompressedBytes);
-                    }
-
-                    decompressor.Dispose();
-                }
-            }
-
-            // Report progress after processing all frames
-            ReportProgress();
-            await HandleBufferingAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] MP3 frame processing error: {ex.Message}");
         }
     }
 
