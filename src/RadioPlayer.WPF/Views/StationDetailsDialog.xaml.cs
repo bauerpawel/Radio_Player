@@ -15,13 +15,12 @@ namespace RadioPlayer.WPF.Views;
 public partial class StationDetailsDialog : Window
 {
     private readonly RadioStation _station;
-    private readonly RadioBrowserService? _radioBrowserService;
-    private RadioStation? _selectedSimilarStation;
+    private readonly IRadioBrowserService? _radioBrowserService;
 
     public RadioStation? SelectedStation { get; private set; }
     public bool ShouldPlayStation { get; private set; }
 
-    public StationDetailsDialog(RadioStation station, RadioBrowserService? radioBrowserService = null)
+    public StationDetailsDialog(RadioStation station, IRadioBrowserService? radioBrowserService = null)
     {
         InitializeComponent();
         _station = station;
@@ -88,7 +87,7 @@ public partial class StationDetailsDialog : Window
         // Technical Information
         CodecText.Text = string.IsNullOrWhiteSpace(_station.Codec) ? "Unknown" : _station.Codec.ToUpperInvariant();
         BitrateText.Text = _station.Bitrate > 0 ? $"{_station.Bitrate} kbps" : "Unknown";
-        StreamUrlText.Text = _station.UrlResolved ?? _station.Url;
+        StreamUrlText.Text = _station.UrlResolved ?? "Not available";
     }
 
     private async Task LoadSimilarStationsAsync()
