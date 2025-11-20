@@ -34,9 +34,6 @@ public class NAudioRadioPlayer : IRadioPlayer
     private float _volume = AppConstants.UI.DefaultVolume;
     private bool _isMuted;
 
-    // Data accumulator for streaming (only used for OGG Vorbis)
-    private MemoryStream? _oggAccumulator;
-    private const int MinimumOggDataSize = 65536; // 64KB minimum before processing OGG
 
     public PlaybackState State
     {
@@ -191,10 +188,6 @@ public class NAudioRadioPlayer : IRadioPlayer
         _bufferedWaveProvider = null;
         _currentStation = null;
 
-        // Clear accumulator
-        _oggAccumulator?.Dispose();
-        _oggAccumulator = null;
-
         // Wait for tasks to complete
         try
         {
@@ -308,35 +301,29 @@ public class NAudioRadioPlayer : IRadioPlayer
         int metadataInterval,
         CancellationToken cancellationToken)
     {
-        var parser = new IcyMetadataParser(metadataInterval);
-        var readBuffer = new byte[AppConstants.AudioBuffer.ChunkSize];
+        // Create IcyStream to filter metadata and provide continuous audio stream
+        using var icyStream = new IcyStream(stream, metadataInterval);
 
-        while (!cancellationToken.IsCancellationRequested)
+        // Forward metadata events
+        icyStream.MetadataReceived += (sender, metadata) =>
         {
-            int bytesRead = await stream.ReadAsync(readBuffer, 0, readBuffer.Length, cancellationToken);
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] Metadata: {metadata.StreamTitle}");
+            DebugLogger.Log("METADATA", $"Title: {metadata.StreamTitle}");
+            MetadataReceived?.Invoke(this, metadata);
+        };
 
-            if (bytesRead == 0)
-            {
-                System.Diagnostics.Debug.WriteLine("[RadioPlayer] Stream ended");
-                break;
-            }
-
-            // Parse ICY metadata
-            var result = parser.ParseStream(readBuffer, 0, bytesRead);
-
-            // Notify metadata
-            if (result.Metadata != null)
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    $"[RadioPlayer] Metadata: {result.Metadata.StreamTitle}");
-                MetadataReceived?.Invoke(this, result.Metadata);
-            }
-
-            // Process audio data directly (no intermediate buffer for MP3)
-            if (result.AudioData.Length > 0)
-            {
-                await ProcessRawAudioDataAsync(result.AudioData, codec, cancellationToken);
-            }
+        // For MP3/AAC, wrap with ReadFullyStream for reliable MediaFoundation decoding
+        var codecUpper = codec.ToUpperInvariant();
+        if (codecUpper == "MP3" || codecUpper == "MPEG" || codecUpper == "AAC" || codecUpper == "MP4" || codecUpper == "AAC+")
+        {
+            DebugLogger.Log("STREAM", $"Creating continuous {codec} stream with ReadFullyStream wrapper");
+            using var readFullyStream = new ReadFullyStream(icyStream);
+            await ProcessAudioStreamAsync(readFullyStream, codec, cancellationToken);
+        }
+        else
+        {
+            // OGG and others can use IcyStream directly
+            await ProcessAudioStreamAsync(icyStream, codec, cancellationToken);
         }
     }
 
@@ -359,116 +346,6 @@ public class NAudioRadioPlayer : IRadioPlayer
         {
             // OGG and other formats don't need ReadFullyStream wrapper
             await ProcessAudioStreamAsync(stream, codec, cancellationToken);
-        }
-    }
-
-    private async Task ProcessRawAudioDataAsync(
-        byte[] audioData,
-        string codec,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var codecUpper = codec.ToUpperInvariant();
-
-            // MP3/AAC: Use direct stream processing with MediaFoundation (no accumulation)
-            // OGG: Use accumulation due to Vorbis decoder requirements
-            if (codecUpper == "MP3" || codecUpper == "MPEG")
-            {
-                await ProcessMp3DirectDataAsync(audioData, cancellationToken);
-            }
-            else if (codecUpper == "OGG" || codecUpper == "VORBIS")
-            {
-                await ProcessOggAccumulatedDataAsync(audioData, cancellationToken);
-            }
-            else if (codecUpper == "AAC" || codecUpper == "MP4" || codecUpper == "AAC+")
-            {
-                await ProcessAacDirectDataAsync(audioData, cancellationToken);
-            }
-            else
-            {
-                // Unknown codec - try MP3 as fallback
-                await ProcessMp3DirectDataAsync(audioData, cancellationToken);
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] Raw audio processing error: {ex.Message}");
-            DebugLogger.Log("ERROR", $"Raw audio processing error: {ex.Message}");
-        }
-    }
-
-    private async Task ProcessMp3DirectDataAsync(byte[] mp3Data, CancellationToken cancellationToken)
-    {
-        try
-        {
-            // For MP3 with ICY metadata, we receive chunks of data
-            // MediaFoundation works best with continuous streams, so we wrap the data in a MemoryStream
-            // and process it immediately with ReadFullyStream for reliable frame reading
-            using var dataStream = new MemoryStream(mp3Data, false);
-            using var readFullyStream = new ReadFullyStream(dataStream);
-
-            DebugLogger.Log("MP3", $"Processing MP3 chunk: {mp3Data.Length} bytes");
-
-            // Process the chunk immediately with MediaFoundation
-            await ProcessAudioStreamAsync(readFullyStream, "MP3", cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] MP3 direct processing error: {ex.Message}");
-            DebugLogger.Log("MP3", $"MP3 direct processing error: {ex.Message}");
-        }
-    }
-
-    private async Task ProcessAacDirectDataAsync(byte[] aacData, CancellationToken cancellationToken)
-    {
-        try
-        {
-            // Similar to MP3, AAC works better with MediaFoundation when using ReadFullyStream
-            using var dataStream = new MemoryStream(aacData, false);
-            using var readFullyStream = new ReadFullyStream(dataStream);
-
-            DebugLogger.Log("AAC", $"Processing AAC chunk: {aacData.Length} bytes");
-
-            await ProcessAudioStreamAsync(readFullyStream, "AAC", cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] AAC direct processing error: {ex.Message}");
-            DebugLogger.Log("AAC", $"AAC direct processing error: {ex.Message}");
-        }
-    }
-
-    private async Task ProcessOggAccumulatedDataAsync(byte[] oggData, CancellationToken cancellationToken)
-    {
-        try
-        {
-            // Initialize accumulator if needed
-            if (_oggAccumulator == null)
-            {
-                _oggAccumulator = new MemoryStream();
-            }
-
-            // Add new data to accumulator
-            await _oggAccumulator.WriteAsync(oggData, 0, oggData.Length, cancellationToken);
-
-            // Process when we have enough data
-            if (_oggAccumulator.Length >= MinimumOggDataSize)
-            {
-                _oggAccumulator.Position = 0;
-                await ProcessAudioStreamAsync(_oggAccumulator, "OGG", cancellationToken);
-
-                // Clear accumulator for next batch
-                _oggAccumulator.SetLength(0);
-                _oggAccumulator.Position = 0;
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] OGG accumulation error: {ex.Message}");
-            // Reset accumulator on error
-            _oggAccumulator?.Dispose();
-            _oggAccumulator = null;
         }
     }
 
