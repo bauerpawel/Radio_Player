@@ -313,6 +313,16 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         int metadataInterval,
         CancellationToken cancellationToken)
     {
+        var codecUpper = codec.ToUpperInvariant();
+
+        // OGG Vorbis requires continuous stream - cannot work with chunks
+        if (codecUpper == "OGG" || codecUpper == "VORBIS")
+        {
+            await StreamOggWithMetadataAsync(stream, metadataInterval, cancellationToken);
+            return;
+        }
+
+        // For MP3/AAC: chunk-based processing
         var parser = new IcyMetadataParser(metadataInterval);
         var readBuffer = new byte[AppConstants.AudioBuffer.ChunkSize];
 
@@ -352,6 +362,16 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         string codec,
         CancellationToken cancellationToken)
     {
+        var codecUpper = codec.ToUpperInvariant();
+
+        // OGG Vorbis requires continuous stream
+        if (codecUpper == "OGG" || codecUpper == "VORBIS")
+        {
+            await ProcessOggStreamAsync(stream, cancellationToken);
+            return;
+        }
+
+        // For MP3/AAC: chunk-based processing
         var buffer = new byte[AppConstants.AudioBuffer.ChunkSize];
 
         while (!cancellationToken.IsCancellationRequested)
@@ -372,6 +392,27 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         }
     }
 
+    private async Task StreamOggWithMetadataAsync(
+        Stream stream,
+        int metadataInterval,
+        CancellationToken cancellationToken)
+    {
+        DebugLogger.Log("OGG", $"Starting OGG stream with ICY metadata (interval: {metadataInterval})");
+
+        // Create filtering stream that removes ICY metadata in real-time
+        using var icyFilter = new IcyFilterStream(stream, metadataInterval);
+
+        // Forward metadata events
+        icyFilter.MetadataReceived += (sender, metadata) =>
+        {
+            DebugLogger.Log("METADATA", $"OGG metadata: {metadata.StreamTitle}");
+            MetadataReceived?.Invoke(this, metadata);
+        };
+
+        // Process clean OGG stream
+        await ProcessOggStreamAsync(icyFilter, cancellationToken);
+    }
+
     private async Task ProcessRawAudioDataAsync(
         byte[] audioData,
         string codec,
@@ -385,11 +426,6 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
             {
                 // Use frame-by-frame decoding with ACM for MP3
                 ProcessMp3Frames(audioData);
-            }
-            else if (codecUpper == "OGG" || codecUpper == "VORBIS")
-            {
-                // Use Vorbis decoder for OGG
-                await ProcessOggDataAsync(audioData, cancellationToken);
             }
             else if (codecUpper == "AAC" || codecUpper == "MP4" || codecUpper == "AAC+")
             {
@@ -489,33 +525,48 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         }
     }
 
-    private async Task ProcessOggDataAsync(byte[] oggData, CancellationToken cancellationToken)
+    private async Task ProcessOggStreamAsync(Stream oggStream, CancellationToken cancellationToken)
     {
         try
         {
-            using var dataStream = new MemoryStream(oggData, false);
-            using var reader = new VorbisWaveReader(dataStream);
+            DebugLogger.Log("OGG", "Creating VorbisWaveReader for continuous OGG stream");
+
+            using var reader = new VorbisWaveReader(oggStream);
 
             if (_bufferedWaveProvider == null)
             {
                 InitializePlayback(reader.WaveFormat);
+                DebugLogger.Log("OGG", $"Initialized OGG playback: {reader.WaveFormat.SampleRate}Hz, {reader.WaveFormat.Channels}ch");
             }
 
-            var buffer = new byte[8192];
+            var buffer = new byte[16384]; // 16KB buffer for OGG
             int bytesRead;
+            int chunkCount = 0;
 
             while ((bytesRead = reader.Read(buffer, 0, buffer.Length)) > 0 && !cancellationToken.IsCancellationRequested)
             {
                 if (_bufferedWaveProvider != null)
                 {
                     _bufferedWaveProvider.AddSamples(buffer, 0, bytesRead);
+                    chunkCount++;
+
+                    if (chunkCount % 10 == 0) // Log every 10 chunks
+                    {
+                        var bufferSeconds = _bufferedWaveProvider.BufferedDuration.TotalSeconds;
+                        DebugLogger.Log("OGG", $"Chunk {chunkCount}: +{bytesRead} bytes, buffer: {bufferSeconds:F2}s");
+                    }
+
+                    ReportProgress();
+                    await HandleBufferingAsync(cancellationToken);
                 }
             }
+
+            DebugLogger.Log("OGG", $"OGG stream ended, total chunks: {chunkCount}");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] OGG processing error: {ex.Message}");
-            DebugLogger.Log("OGG", $"Processing error: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] OGG stream processing error: {ex.Message}");
+            DebugLogger.Log("OGG", $"Processing error: {ex.GetType().Name} - {ex.Message}");
         }
 
         await Task.CompletedTask;
