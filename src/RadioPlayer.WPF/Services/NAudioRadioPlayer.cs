@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NAudio.Wave;
 using NAudio.Wave.Compression;
-using NAudio.Vorbis;
+using NVorbis; // Use NVorbis directly for non-seekable HTTP streams
 using Polly;
 using Polly.Retry;
 using RadioPlayer.WPF.Helpers;
@@ -529,31 +529,55 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
     {
         try
         {
-            DebugLogger.Log("OGG", "Creating VorbisWaveReader for continuous OGG stream");
+            DebugLogger.Log("OGG", "Creating NVorbis VorbisReader for continuous OGG stream (supports non-seekable streams)");
 
-            using var reader = new VorbisWaveReader(oggStream);
+            // NVorbis.VorbisReader supports non-seekable streams (HTTP streaming)
+            using var vorbisReader = new VorbisReader(oggStream, closeOnDispose: false);
 
+            // Get audio format info
+            var channels = vorbisReader.Channels;
+            var sampleRate = vorbisReader.SampleRate;
+            DebugLogger.Log("OGG", $"OGG stream info: {sampleRate}Hz, {channels} channels");
+
+            // Initialize playback with 16-bit PCM format
             if (_bufferedWaveProvider == null)
             {
-                InitializePlayback(reader.WaveFormat);
-                DebugLogger.Log("OGG", $"Initialized OGG playback: {reader.WaveFormat.SampleRate}Hz, {reader.WaveFormat.Channels}ch");
+                var waveFormat = new WaveFormat(sampleRate, 16, channels);
+                InitializePlayback(waveFormat);
+                DebugLogger.Log("OGG", $"Initialized OGG playback: {sampleRate}Hz, {channels}ch, 16-bit PCM");
             }
 
-            var buffer = new byte[16384]; // 16KB buffer for OGG
-            int bytesRead;
+            // Buffer for reading float samples from NVorbis (200ms worth of audio)
+            var floatBuffer = new float[channels * sampleRate / 5];
+
+            // Buffer for converted PCM samples (16-bit signed integers)
+            var pcmBuffer = new byte[floatBuffer.Length * 2]; // 2 bytes per sample (16-bit)
+
             int chunkCount = 0;
 
-            while ((bytesRead = reader.Read(buffer, 0, buffer.Length)) > 0 && !cancellationToken.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
-                if (_bufferedWaveProvider != null)
+                // Read float samples from NVorbis
+                int samplesRead = vorbisReader.ReadSamples(floatBuffer, 0, floatBuffer.Length);
+
+                if (samplesRead == 0)
                 {
-                    _bufferedWaveProvider.AddSamples(buffer, 0, bytesRead);
+                    DebugLogger.Log("OGG", "End of OGG stream reached");
+                    break;
+                }
+
+                // Convert float samples to 16-bit PCM
+                int bytesConverted = ConvertFloatToPcm16(floatBuffer, samplesRead, pcmBuffer);
+
+                if (_bufferedWaveProvider != null && bytesConverted > 0)
+                {
+                    _bufferedWaveProvider.AddSamples(pcmBuffer, 0, bytesConverted);
                     chunkCount++;
 
                     if (chunkCount % 10 == 0) // Log every 10 chunks
                     {
                         var bufferSeconds = _bufferedWaveProvider.BufferedDuration.TotalSeconds;
-                        DebugLogger.Log("OGG", $"Chunk {chunkCount}: +{bytesRead} bytes, buffer: {bufferSeconds:F2}s");
+                        DebugLogger.Log("OGG", $"Chunk {chunkCount}: {samplesRead} samples ({bytesConverted} bytes), buffer: {bufferSeconds:F2}s");
                     }
 
                     ReportProgress();
@@ -561,15 +585,38 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
                 }
             }
 
-            DebugLogger.Log("OGG", $"OGG stream ended, total chunks: {chunkCount}");
+            DebugLogger.Log("OGG", $"OGG stream processing completed, total chunks: {chunkCount}");
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[RadioPlayer] OGG stream processing error: {ex.Message}");
-            DebugLogger.Log("OGG", $"Processing error: {ex.GetType().Name} - {ex.Message}");
+            DebugLogger.Log("OGG", $"Processing error: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}");
         }
 
         await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Converts float samples (-1.0 to 1.0) to 16-bit PCM (signed short)
+    /// </summary>
+    private int ConvertFloatToPcm16(float[] floatSamples, int sampleCount, byte[] pcmBuffer)
+    {
+        int byteIndex = 0;
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            // Clamp float sample to -1.0 to 1.0 range
+            float sample = Math.Clamp(floatSamples[i], -1.0f, 1.0f);
+
+            // Convert to 16-bit signed integer (-32768 to 32767)
+            short pcmSample = (short)(sample * 32767f);
+
+            // Write as little-endian bytes
+            pcmBuffer[byteIndex++] = (byte)(pcmSample & 0xFF);
+            pcmBuffer[byteIndex++] = (byte)((pcmSample >> 8) & 0xFF);
+        }
+
+        return byteIndex;
     }
 
     private async Task ProcessAacDataAsync(byte[] aacData, CancellationToken cancellationToken)
