@@ -14,21 +14,17 @@ public partial class SettingsDialog : Window
 
     private void LoadCurrentSettings()
     {
-        BufferSlider.Value = AppConstants.AudioBuffer.BufferDuration.TotalSeconds;
-        PreBufferSlider.Value = AppConstants.AudioBuffer.PreBufferDuration.TotalSeconds;
         DebugLoggingCheckBox.IsChecked = AppConstants.Debug.EnableLogging;
         MinimizeToTrayCheckBox.IsChecked = AppConstants.UI.MinimizeToTray;
     }
 
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
-        AppConstants.AudioBuffer.BufferDuration = TimeSpan.FromSeconds(BufferSlider.Value);
-        AppConstants.AudioBuffer.PreBufferDuration = TimeSpan.FromSeconds(PreBufferSlider.Value);
         AppConstants.Debug.EnableLogging = DebugLoggingCheckBox.IsChecked ?? false;
         AppConstants.UI.MinimizeToTray = MinimizeToTrayCheckBox.IsChecked ?? false;
 
         MessageBox.Show(
-            "Settings saved! Restart playback for changes to take effect.",
+            "Settings saved successfully!",
             "Settings Saved",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
@@ -39,8 +35,6 @@ public partial class SettingsDialog : Window
 
     private void ResetButton_Click(object sender, RoutedEventArgs e)
     {
-        BufferSlider.Value = 10;
-        PreBufferSlider.Value = 3;
         DebugLoggingCheckBox.IsChecked = false;
         MinimizeToTrayCheckBox.IsChecked = false;
     }
