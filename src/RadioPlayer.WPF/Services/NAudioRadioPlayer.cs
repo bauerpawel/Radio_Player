@@ -34,13 +34,9 @@ public class NAudioRadioPlayer : IRadioPlayer
     private float _volume = AppConstants.UI.DefaultVolume;
     private bool _isMuted;
 
-    // Data accumulators for streaming
-    private MemoryStream? _mp3Accumulator;
+    // Data accumulator for streaming (only used for OGG Vorbis)
     private MemoryStream? _oggAccumulator;
-    private MemoryStream? _aacAccumulator;
-    private const int MinimumMp3DataSize = 32768; // 32KB minimum before processing MP3 (reduced from 128KB to avoid buffer underruns)
-    private const int MinimumOggDataSize = 65536; // 64KB minimum before processing
-    private const int MinimumAacDataSize = 32768; // 32KB minimum before processing
+    private const int MinimumOggDataSize = 65536; // 64KB minimum before processing OGG
 
     public PlaybackState State
     {
@@ -195,13 +191,9 @@ public class NAudioRadioPlayer : IRadioPlayer
         _bufferedWaveProvider = null;
         _currentStation = null;
 
-        // Clear accumulators
-        _mp3Accumulator?.Dispose();
-        _mp3Accumulator = null;
+        // Clear accumulator
         _oggAccumulator?.Dispose();
         _oggAccumulator = null;
-        _aacAccumulator?.Dispose();
-        _aacAccumulator = null;
 
         // Wait for tasks to complete
         try
@@ -353,7 +345,21 @@ public class NAudioRadioPlayer : IRadioPlayer
         string codec,
         CancellationToken cancellationToken)
     {
-        await ProcessAudioStreamAsync(stream, codec, cancellationToken);
+        // For streams without metadata, wrap with ReadFullyStream for reliable reading
+        // This is especially important for MP3 and AAC with MediaFoundation
+        var codecUpper = codec.ToUpperInvariant();
+
+        if (codecUpper == "MP3" || codecUpper == "MPEG" || codecUpper == "AAC" || codecUpper == "MP4" || codecUpper == "AAC+")
+        {
+            DebugLogger.Log("STREAM", $"Wrapping {codec} stream with ReadFullyStream for reliable reading");
+            using var readFullyStream = new ReadFullyStream(stream);
+            await ProcessAudioStreamAsync(readFullyStream, codec, cancellationToken);
+        }
+        else
+        {
+            // OGG and other formats don't need ReadFullyStream wrapper
+            await ProcessAudioStreamAsync(stream, codec, cancellationToken);
+        }
     }
 
     private async Task ProcessRawAudioDataAsync(
@@ -365,10 +371,11 @@ public class NAudioRadioPlayer : IRadioPlayer
         {
             var codecUpper = codec.ToUpperInvariant();
 
-            // All codecs use accumulation approach
+            // MP3/AAC: Use direct stream processing with MediaFoundation (no accumulation)
+            // OGG: Use accumulation due to Vorbis decoder requirements
             if (codecUpper == "MP3" || codecUpper == "MPEG")
             {
-                await ProcessMp3AccumulatedDataAsync(audioData, cancellationToken);
+                await ProcessMp3DirectDataAsync(audioData, cancellationToken);
             }
             else if (codecUpper == "OGG" || codecUpper == "VORBIS")
             {
@@ -376,56 +383,59 @@ public class NAudioRadioPlayer : IRadioPlayer
             }
             else if (codecUpper == "AAC" || codecUpper == "MP4" || codecUpper == "AAC+")
             {
-                await ProcessAacAccumulatedDataAsync(audioData, cancellationToken);
+                await ProcessAacDirectDataAsync(audioData, cancellationToken);
             }
             else
             {
                 // Unknown codec - try MP3 as fallback
-                await ProcessMp3AccumulatedDataAsync(audioData, cancellationToken);
+                await ProcessMp3DirectDataAsync(audioData, cancellationToken);
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[RadioPlayer] Raw audio processing error: {ex.Message}");
+            DebugLogger.Log("ERROR", $"Raw audio processing error: {ex.Message}");
         }
     }
 
-    private async Task ProcessMp3AccumulatedDataAsync(byte[] mp3Data, CancellationToken cancellationToken)
+    private async Task ProcessMp3DirectDataAsync(byte[] mp3Data, CancellationToken cancellationToken)
     {
         try
         {
-            // Initialize accumulator if needed
-            if (_mp3Accumulator == null)
-            {
-                _mp3Accumulator = new MemoryStream();
-                DebugLogger.Log("MP3", "MP3 accumulator initialized");
-            }
+            // For MP3 with ICY metadata, we receive chunks of data
+            // MediaFoundation works best with continuous streams, so we wrap the data in a MemoryStream
+            // and process it immediately with ReadFullyStream for reliable frame reading
+            using var dataStream = new MemoryStream(mp3Data, false);
+            using var readFullyStream = new ReadFullyStream(dataStream);
 
-            // Add new data to accumulator
-            await _mp3Accumulator.WriteAsync(mp3Data, 0, mp3Data.Length, cancellationToken);
-            DebugLogger.Log("MP3", $"Accumulated {mp3Data.Length} bytes, total: {_mp3Accumulator.Length} bytes");
+            DebugLogger.Log("MP3", $"Processing MP3 chunk: {mp3Data.Length} bytes");
 
-            // Process when we have enough data (128KB for smooth playback)
-            if (_mp3Accumulator.Length >= MinimumMp3DataSize)
-            {
-                DebugLogger.Log("MP3", $"Processing MP3 batch: {_mp3Accumulator.Length} bytes");
-                _mp3Accumulator.Position = 0;
-
-                // Use same approach as OGG/AAC - ProcessAudioStreamAsync handles buffering properly
-                await ProcessAudioStreamAsync(_mp3Accumulator, "MP3", cancellationToken);
-
-                // Clear accumulator for next batch
-                _mp3Accumulator.SetLength(0);
-                _mp3Accumulator.Position = 0;
-            }
+            // Process the chunk immediately with MediaFoundation
+            await ProcessAudioStreamAsync(readFullyStream, "MP3", cancellationToken);
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] MP3 accumulation error: {ex.Message}");
-            DebugLogger.Log("MP3", $"MP3 accumulation error: {ex.Message}");
-            // Reset accumulator on error
-            _mp3Accumulator?.Dispose();
-            _mp3Accumulator = null;
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] MP3 direct processing error: {ex.Message}");
+            DebugLogger.Log("MP3", $"MP3 direct processing error: {ex.Message}");
+        }
+    }
+
+    private async Task ProcessAacDirectDataAsync(byte[] aacData, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Similar to MP3, AAC works better with MediaFoundation when using ReadFullyStream
+            using var dataStream = new MemoryStream(aacData, false);
+            using var readFullyStream = new ReadFullyStream(dataStream);
+
+            DebugLogger.Log("AAC", $"Processing AAC chunk: {aacData.Length} bytes");
+
+            await ProcessAudioStreamAsync(readFullyStream, "AAC", cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] AAC direct processing error: {ex.Message}");
+            DebugLogger.Log("AAC", $"AAC direct processing error: {ex.Message}");
         }
     }
 
@@ -462,38 +472,6 @@ public class NAudioRadioPlayer : IRadioPlayer
         }
     }
 
-    private async Task ProcessAacAccumulatedDataAsync(byte[] aacData, CancellationToken cancellationToken)
-    {
-        try
-        {
-            // Initialize accumulator if needed
-            if (_aacAccumulator == null)
-            {
-                _aacAccumulator = new MemoryStream();
-            }
-
-            // Add new data to accumulator
-            await _aacAccumulator.WriteAsync(aacData, 0, aacData.Length, cancellationToken);
-
-            // Process when we have enough data
-            if (_aacAccumulator.Length >= MinimumAacDataSize)
-            {
-                _aacAccumulator.Position = 0;
-                await ProcessAudioStreamAsync(_aacAccumulator, "AAC", cancellationToken);
-
-                // Clear accumulator for next batch
-                _aacAccumulator.SetLength(0);
-                _aacAccumulator.Position = 0;
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] AAC accumulation error: {ex.Message}");
-            // Reset accumulator on error
-            _aacAccumulator?.Dispose();
-            _aacAccumulator = null;
-        }
-    }
 
     private async Task ProcessAudioStreamAsync(
         Stream audioStream,
