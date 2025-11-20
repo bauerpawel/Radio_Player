@@ -7,7 +7,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using NAudio.Wave;
 using NAudio.Wave.Compression;
-using NVorbis; // Use NVorbis directly for non-seekable HTTP streams
+using NVorbis; // For OGG Vorbis decoding (non-seekable HTTP streams)
+using Concentus.Oggfile; // For OGG OPUS decoding
+using Concentus.Structs; // For Opus decoder
 using Polly;
 using Polly.Retry;
 using RadioPlayer.WPF.Helpers;
@@ -290,8 +292,13 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
                 return "MP3";
             if (codec.Contains("AAC") || codec.Contains("MP4"))
                 return "AAC";
+            // Distinguish OPUS from Vorbis
+            if (codec.Contains("OPUS"))
+                return "OPUS";
             if (codec.Contains("OGG") || codec.Contains("VORBIS"))
-                return "OGG";
+                return "VORBIS";
+            if (codec.Contains("FLAC"))
+                return "FLAC";
         }
 
         // Try content-type header
@@ -300,8 +307,10 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
             return "MP3";
         if (contentType.Contains("aac") || contentType.Contains("mp4"))
             return "AAC";
+        if (contentType.Contains("opus"))
+            return "OPUS";
         if (contentType.Contains("ogg") || contentType.Contains("vorbis"))
-            return "OGG";
+            return "VORBIS";
 
         // Default to MP3
         return "MP3";
@@ -315,10 +324,10 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
     {
         var codecUpper = codec.ToUpperInvariant();
 
-        // OGG Vorbis requires continuous stream - cannot work with chunks
-        if (codecUpper == "OGG" || codecUpper == "VORBIS")
+        // OGG codecs (OPUS/Vorbis) require continuous stream - cannot work with chunks
+        if (codecUpper == "OPUS" || codecUpper == "VORBIS" || codecUpper == "FLAC")
         {
-            await StreamOggWithMetadataAsync(stream, metadataInterval, cancellationToken);
+            await StreamOggWithMetadataAsync(stream, codec, metadataInterval, cancellationToken);
             return;
         }
 
@@ -364,10 +373,10 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
     {
         var codecUpper = codec.ToUpperInvariant();
 
-        // OGG Vorbis requires continuous stream
-        if (codecUpper == "OGG" || codecUpper == "VORBIS")
+        // OGG codecs (OPUS/Vorbis) require continuous stream
+        if (codecUpper == "OPUS" || codecUpper == "VORBIS" || codecUpper == "FLAC")
         {
-            await ProcessOggStreamAsync(stream, cancellationToken);
+            await ProcessOggStreamAsync(stream, codec, cancellationToken);
             return;
         }
 
@@ -394,10 +403,11 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
 
     private async Task StreamOggWithMetadataAsync(
         Stream stream,
+        string codec,
         int metadataInterval,
         CancellationToken cancellationToken)
     {
-        DebugLogger.Log("OGG", $"Starting OGG stream with ICY metadata (interval: {metadataInterval})");
+        DebugLogger.Log("OGG", $"Starting {codec} stream with ICY metadata (interval: {metadataInterval})");
 
         // Create filtering stream that removes ICY metadata in real-time
         using var icyFilter = new IcyFilterStream(stream, metadataInterval);
@@ -405,12 +415,12 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         // Forward metadata events
         icyFilter.MetadataReceived += (sender, metadata) =>
         {
-            DebugLogger.Log("METADATA", $"OGG metadata: {metadata.StreamTitle}");
+            DebugLogger.Log("METADATA", $"{codec} metadata: {metadata.StreamTitle}");
             MetadataReceived?.Invoke(this, metadata);
         };
 
         // Process clean OGG stream
-        await ProcessOggStreamAsync(icyFilter, cancellationToken);
+        await ProcessOggStreamAsync(icyFilter, codec, cancellationToken);
     }
 
     private async Task ProcessRawAudioDataAsync(
@@ -525,26 +535,101 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         }
     }
 
-    private async Task ProcessOggStreamAsync(Stream oggStream, CancellationToken cancellationToken)
+    private async Task ProcessOggStreamAsync(Stream oggStream, string codec, CancellationToken cancellationToken)
+    {
+        var codecUpper = codec.ToUpperInvariant();
+
+        if (codecUpper == "OPUS")
+        {
+            await ProcessOpusStreamAsync(oggStream, cancellationToken);
+        }
+        else // Vorbis or FLAC (try Vorbis decoder)
+        {
+            await ProcessVorbisStreamAsync(oggStream, cancellationToken);
+        }
+    }
+
+    private async Task ProcessOpusStreamAsync(Stream opusStream, CancellationToken cancellationToken)
     {
         try
         {
-            DebugLogger.Log("OGG", "Creating NVorbis VorbisReader for continuous OGG stream (supports non-seekable streams)");
+            DebugLogger.Log("OPUS", "Creating Concentus OpusDecoder for OGG OPUS stream (supports non-seekable streams)");
+
+            // Create OPUS decoder (48kHz, stereo is standard for OPUS)
+            var decoder = OpusDecoder.Create(48000, 2);
+            using var oggIn = new OpusOggReadStream(decoder, opusStream);
+
+            DebugLogger.Log("OPUS", $"OPUS stream info: 48000Hz, 2 channels (OPUS standard)");
+
+            // Initialize playback with 16-bit PCM format
+            if (_bufferedWaveProvider == null)
+            {
+                var waveFormat = new WaveFormat(48000, 16, 2);
+                InitializePlayback(waveFormat);
+                DebugLogger.Log("OPUS", "Initialized OPUS playback: 48000Hz, 2ch, 16-bit PCM");
+            }
+
+            int chunkCount = 0;
+
+            while (!cancellationToken.IsCancellationRequested && oggIn.HasNextPacket)
+            {
+                // Decode next packet (returns 16-bit PCM samples)
+                short[] packet = oggIn.DecodeNextPacket();
+
+                if (packet != null && packet.Length > 0)
+                {
+                    // Convert short[] to byte[] for BufferedWaveProvider
+                    byte[] pcmBuffer = new byte[packet.Length * 2];
+                    Buffer.BlockCopy(packet, 0, pcmBuffer, 0, pcmBuffer.Length);
+
+                    if (_bufferedWaveProvider != null)
+                    {
+                        _bufferedWaveProvider.AddSamples(pcmBuffer, 0, pcmBuffer.Length);
+                        chunkCount++;
+
+                        if (chunkCount % 10 == 0) // Log every 10 packets
+                        {
+                            var bufferSeconds = _bufferedWaveProvider.BufferedDuration.TotalSeconds;
+                            DebugLogger.Log("OPUS", $"Packet {chunkCount}: {packet.Length} samples, buffer: {bufferSeconds:F2}s");
+                        }
+
+                        ReportProgress();
+                        await HandleBufferingAsync(cancellationToken);
+                    }
+                }
+            }
+
+            DebugLogger.Log("OPUS", $"OPUS stream processing completed, total packets: {chunkCount}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] OPUS stream processing error: {ex.Message}");
+            DebugLogger.Log("OPUS", $"Processing error: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}");
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task ProcessVorbisStreamAsync(Stream vorbisStream, CancellationToken cancellationToken)
+    {
+        try
+        {
+            DebugLogger.Log("VORBIS", "Creating NVorbis VorbisReader for continuous OGG Vorbis stream (supports non-seekable streams)");
 
             // NVorbis.VorbisReader supports non-seekable streams (HTTP streaming)
-            using var vorbisReader = new VorbisReader(oggStream, closeOnDispose: false);
+            using var vorbisReader = new VorbisReader(vorbisStream, closeOnDispose: false);
 
             // Get audio format info
             var channels = vorbisReader.Channels;
             var sampleRate = vorbisReader.SampleRate;
-            DebugLogger.Log("OGG", $"OGG stream info: {sampleRate}Hz, {channels} channels");
+            DebugLogger.Log("VORBIS", $"Vorbis stream info: {sampleRate}Hz, {channels} channels");
 
             // Initialize playback with 16-bit PCM format
             if (_bufferedWaveProvider == null)
             {
                 var waveFormat = new WaveFormat(sampleRate, 16, channels);
                 InitializePlayback(waveFormat);
-                DebugLogger.Log("OGG", $"Initialized OGG playback: {sampleRate}Hz, {channels}ch, 16-bit PCM");
+                DebugLogger.Log("VORBIS", $"Initialized Vorbis playback: {sampleRate}Hz, {channels}ch, 16-bit PCM");
             }
 
             // Buffer for reading float samples from NVorbis (200ms worth of audio)
@@ -562,7 +647,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
 
                 if (samplesRead == 0)
                 {
-                    DebugLogger.Log("OGG", "End of OGG stream reached");
+                    DebugLogger.Log("VORBIS", "End of Vorbis stream reached");
                     break;
                 }
 
@@ -577,7 +662,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
                     if (chunkCount % 10 == 0) // Log every 10 chunks
                     {
                         var bufferSeconds = _bufferedWaveProvider.BufferedDuration.TotalSeconds;
-                        DebugLogger.Log("OGG", $"Chunk {chunkCount}: {samplesRead} samples ({bytesConverted} bytes), buffer: {bufferSeconds:F2}s");
+                        DebugLogger.Log("VORBIS", $"Chunk {chunkCount}: {samplesRead} samples ({bytesConverted} bytes), buffer: {bufferSeconds:F2}s");
                     }
 
                     ReportProgress();
@@ -585,12 +670,12 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
                 }
             }
 
-            DebugLogger.Log("OGG", $"OGG stream processing completed, total chunks: {chunkCount}");
+            DebugLogger.Log("VORBIS", $"Vorbis stream processing completed, total chunks: {chunkCount}");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] OGG stream processing error: {ex.Message}");
-            DebugLogger.Log("OGG", $"Processing error: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}");
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] Vorbis stream processing error: {ex.Message}");
+            DebugLogger.Log("VORBIS", $"Processing error: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}");
         }
 
         await Task.CompletedTask;
