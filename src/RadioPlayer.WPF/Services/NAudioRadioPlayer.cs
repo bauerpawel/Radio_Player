@@ -1,10 +1,12 @@
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using NAudio.Wave;
-using NAudio.Wave.SampleProviders;
+using NAudio.Wave.Compression;
 using NAudio.Vorbis;
 using Polly;
 using Polly.Retry;
@@ -15,10 +17,10 @@ namespace RadioPlayer.WPF.Services;
 
 /// <summary>
 /// Internet radio player using NAudio library
-/// Implements two-thread architecture: download thread + playback thread
+/// Implements frame-by-frame MP3 decoding with ACM for reliable streaming
 /// Features: MP3/AAC/OGG streaming, ICY metadata, buffer management, auto-reconnect
 /// </summary>
-public class NAudioRadioPlayer : IRadioPlayer
+public class NAudioRadioPlayer : IRadioPlayer, IDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly AsyncRetryPolicy _retryPolicy;
@@ -34,6 +36,10 @@ public class NAudioRadioPlayer : IRadioPlayer
     private float _volume = AppConstants.UI.DefaultVolume;
     private bool _isMuted;
 
+    // MP3 frame-by-frame decoding with ACM
+    private MemoryStream? _mp3InputBuffer;
+    private AcmMp3FrameDecompressor? _mp3Decompressor;
+    private readonly byte[] _pcmBuffer = new byte[65536];
 
     public PlaybackState State
     {
@@ -44,7 +50,7 @@ public class NAudioRadioPlayer : IRadioPlayer
             {
                 var oldState = _state;
                 _state = value;
-                DebugLogger.Log("STATE", $"State changed: {oldState} -> {value}");
+                DebugLogger.Log("STATE", $"State changed: {oldState} → {value}");
                 PlaybackStateChanged?.Invoke(this, value);
             }
         }
@@ -188,6 +194,12 @@ public class NAudioRadioPlayer : IRadioPlayer
         _bufferedWaveProvider = null;
         _currentStation = null;
 
+        // Clean up MP3 decoder
+        _mp3Decompressor?.Dispose();
+        _mp3Decompressor = null;
+        _mp3InputBuffer?.Dispose();
+        _mp3InputBuffer = null;
+
         // Wait for tasks to complete
         try
         {
@@ -301,29 +313,37 @@ public class NAudioRadioPlayer : IRadioPlayer
         int metadataInterval,
         CancellationToken cancellationToken)
     {
-        // Create IcyStream to filter metadata and provide continuous audio stream
-        using var icyStream = new IcyStream(stream, metadataInterval);
+        var parser = new IcyMetadataParser(metadataInterval);
+        var readBuffer = new byte[AppConstants.AudioBuffer.ChunkSize];
 
-        // Forward metadata events
-        icyStream.MetadataReceived += (sender, metadata) =>
+        while (!cancellationToken.IsCancellationRequested)
         {
-            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] Metadata: {metadata.StreamTitle}");
-            DebugLogger.Log("METADATA", $"Title: {metadata.StreamTitle}");
-            MetadataReceived?.Invoke(this, metadata);
-        };
+            int bytesRead = await stream.ReadAsync(readBuffer, 0, readBuffer.Length, cancellationToken);
 
-        // For MP3/AAC, wrap with ReadFullyStream for reliable MediaFoundation decoding
-        var codecUpper = codec.ToUpperInvariant();
-        if (codecUpper == "MP3" || codecUpper == "MPEG" || codecUpper == "AAC" || codecUpper == "MP4" || codecUpper == "AAC+")
-        {
-            DebugLogger.Log("STREAM", $"Creating continuous {codec} stream with ReadFullyStream wrapper");
-            using var readFullyStream = new ReadFullyStream(icyStream);
-            await ProcessAudioStreamAsync(readFullyStream, codec, cancellationToken);
-        }
-        else
-        {
-            // OGG and others can use IcyStream directly
-            await ProcessAudioStreamAsync(icyStream, codec, cancellationToken);
+            if (bytesRead == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("[RadioPlayer] Stream ended");
+                DebugLogger.Log("STREAM", "Stream ended");
+                break;
+            }
+
+            // Parse ICY metadata
+            var result = parser.ParseStream(readBuffer, 0, bytesRead);
+
+            // Notify metadata
+            if (result.Metadata != null)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[RadioPlayer] Metadata: {result.Metadata.StreamTitle}");
+                DebugLogger.Log("METADATA", $"Title: {result.Metadata.StreamTitle}");
+                MetadataReceived?.Invoke(this, result.Metadata);
+            }
+
+            // Process audio data
+            if (result.AudioData.Length > 0)
+            {
+                await ProcessRawAudioDataAsync(result.AudioData, codec, cancellationToken);
+            }
         }
     }
 
@@ -332,104 +352,205 @@ public class NAudioRadioPlayer : IRadioPlayer
         string codec,
         CancellationToken cancellationToken)
     {
-        // For streams without metadata, wrap with ReadFullyStream for reliable reading
-        // This is especially important for MP3 and AAC with MediaFoundation
-        var codecUpper = codec.ToUpperInvariant();
+        var buffer = new byte[AppConstants.AudioBuffer.ChunkSize];
 
-        if (codecUpper == "MP3" || codecUpper == "MPEG" || codecUpper == "AAC" || codecUpper == "MP4" || codecUpper == "AAC+")
+        while (!cancellationToken.IsCancellationRequested)
         {
-            DebugLogger.Log("STREAM", $"Wrapping {codec} stream with ReadFullyStream for reliable reading");
-            using var readFullyStream = new ReadFullyStream(stream);
-            await ProcessAudioStreamAsync(readFullyStream, codec, cancellationToken);
-        }
-        else
-        {
-            // OGG and other formats don't need ReadFullyStream wrapper
-            await ProcessAudioStreamAsync(stream, codec, cancellationToken);
+            int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+
+            if (bytesRead == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("[RadioPlayer] Stream ended");
+                DebugLogger.Log("STREAM", "Stream ended");
+                break;
+            }
+
+            var audioChunk = new byte[bytesRead];
+            Buffer.BlockCopy(buffer, 0, audioChunk, 0, bytesRead);
+
+            await ProcessRawAudioDataAsync(audioChunk, codec, cancellationToken);
         }
     }
 
-
-    private async Task ProcessAudioStreamAsync(
-        Stream audioStream,
+    private async Task ProcessRawAudioDataAsync(
+        byte[] audioData,
         string codec,
         CancellationToken cancellationToken)
     {
         try
         {
-            WaveStream? reader = null;
+            var codecUpper = codec.ToUpperInvariant();
 
-            // Create appropriate reader based on codec
-            switch (codec.ToUpperInvariant())
+            if (codecUpper == "MP3" || codecUpper == "MPEG")
             {
-                case "MP3":
-                case "MPEG":
-                    // Use Media Foundation for MP3 (more stable for streaming than Mp3FileReader)
-                    reader = new StreamMediaFoundationReader(audioStream);
-                    break;
-
-                case "AAC":
-                case "MP4":
-                case "AAC+":
-                    // Use Media Foundation for AAC (Windows 7+)
-                    reader = new StreamMediaFoundationReader(audioStream);
-                    break;
-
-                case "OGG":
-                case "VORBIS":
-                    // Use NAudio.Vorbis for OGG
-                    reader = new VorbisWaveReader(audioStream);
-                    break;
-
-                default:
-                    // Try Media Foundation as fallback (works for most formats)
-                    System.Diagnostics.Debug.WriteLine($"[RadioPlayer] Unknown codec '{codec}', trying Media Foundation");
-                    reader = new StreamMediaFoundationReader(audioStream);
-                    break;
+                // Use frame-by-frame decoding with ACM for MP3
+                ProcessMp3Frames(audioData);
+            }
+            else if (codecUpper == "OGG" || codecUpper == "VORBIS")
+            {
+                // Use Vorbis decoder for OGG
+                await ProcessOggDataAsync(audioData, cancellationToken);
+            }
+            else if (codecUpper == "AAC" || codecUpper == "MP4" || codecUpper == "AAC+")
+            {
+                // Use MediaFoundation for AAC
+                await ProcessAacDataAsync(audioData, cancellationToken);
+            }
+            else
+            {
+                // Unknown codec - try MP3 as fallback
+                ProcessMp3Frames(audioData);
             }
 
-            if (reader != null)
+            ReportProgress();
+            await HandleBufferingAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] Raw audio processing error: {ex.Message}");
+            DebugLogger.Log("ERROR", $"Raw audio processing error: {ex.Message}");
+        }
+    }
+
+    private void ProcessMp3Frames(byte[] newData)
+    {
+        // Initialize MP3 input buffer if needed
+        if (_mp3InputBuffer == null)
+        {
+            _mp3InputBuffer = new MemoryStream();
+            DebugLogger.Log("MP3", "MP3 input buffer initialized");
+        }
+
+        // Append new data to buffer
+        _mp3InputBuffer.Seek(0, SeekOrigin.End);
+        _mp3InputBuffer.Write(newData, 0, newData.Length);
+        _mp3InputBuffer.Position = 0;
+
+        // Process frames from buffer
+        while (_mp3InputBuffer.Position <= _mp3InputBuffer.Length - 4)
+        {
+            long startPosition = _mp3InputBuffer.Position;
+            Mp3Frame? frame = null;
+
+            try
             {
-                // Initialize playback on first successful read
-                if (_bufferedWaveProvider == null)
+                frame = Mp3Frame.LoadFromStream(_mp3InputBuffer);
+            }
+            catch (Exception ex)
+            {
+                // Not enough data for complete frame, rewind and wait for more
+                _mp3InputBuffer.Position = startPosition;
+                DebugLogger.Log("MP3", $"Frame load failed at position {startPosition}, waiting for more data");
+                break;
+            }
+
+            if (frame == null)
+            {
+                DebugLogger.Log("MP3", "No more frames in buffer");
+                break;
+            }
+
+            // Initialize decompressor and playback on first frame
+            if (_bufferedWaveProvider == null)
+            {
+                var mp3WaveFormat = new Mp3WaveFormat(
+                    frame.SampleRate,
+                    frame.ChannelMode == ChannelMode.Mono ? 1 : 2,
+                    frame.FrameLength,
+                    frame.BitRate);
+
+                _mp3Decompressor = new AcmMp3FrameDecompressor(mp3WaveFormat);
+                InitializePlayback(_mp3Decompressor.OutputFormat);
+
+                DebugLogger.Log("MP3", $"Initialized MP3 decoder: {frame.SampleRate}Hz, {frame.ChannelMode}, {frame.BitRate} bps");
+            }
+
+            // Decompress frame to PCM
+            int decodedBytes = _mp3Decompressor!.DecompressFrame(frame, _pcmBuffer, 0);
+
+            if (decodedBytes > 0 && _bufferedWaveProvider != null)
+            {
+                _bufferedWaveProvider.AddSamples(_pcmBuffer, 0, decodedBytes);
+            }
+        }
+
+        // Keep remaining data in buffer for next iteration
+        long remainingBytes = _mp3InputBuffer.Length - _mp3InputBuffer.Position;
+        if (remainingBytes > 0)
+        {
+            var leftoverData = new byte[remainingBytes];
+            _mp3InputBuffer.Read(leftoverData, 0, leftoverData.Length);
+            _mp3InputBuffer.SetLength(0);
+            _mp3InputBuffer.Write(leftoverData, 0, leftoverData.Length);
+        }
+        else
+        {
+            _mp3InputBuffer.SetLength(0);
+        }
+    }
+
+    private async Task ProcessOggDataAsync(byte[] oggData, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var dataStream = new MemoryStream(oggData, false);
+            using var reader = new VorbisWaveReader(dataStream);
+
+            if (_bufferedWaveProvider == null)
+            {
+                InitializePlayback(reader.WaveFormat);
+            }
+
+            var buffer = new byte[8192];
+            int bytesRead;
+
+            while ((bytesRead = reader.Read(buffer, 0, buffer.Length)) > 0 && !cancellationToken.IsCancellationRequested)
+            {
+                if (_bufferedWaveProvider != null)
                 {
-                    InitializePlayback(reader.WaveFormat);
+                    _bufferedWaveProvider.AddSamples(buffer, 0, bytesRead);
                 }
-
-                // Read and buffer audio data
-                var buffer = new byte[AppConstants.AudioBuffer.ChunkSize];
-                int bytesRead;
-                int chunkCount = 0;
-
-                while ((bytesRead = reader.Read(buffer, 0, buffer.Length)) > 0 && !cancellationToken.IsCancellationRequested)
-                {
-                    if (_bufferedWaveProvider != null)
-                    {
-                        _bufferedWaveProvider.AddSamples(buffer, 0, bytesRead);
-                        chunkCount++;
-
-                        var bufferSeconds = _bufferedWaveProvider.BufferedDuration.TotalSeconds;
-                        var bufferPercent = BufferFillPercentage * 100;
-
-                        DebugLogger.Log("BUFFER", $"Chunk {chunkCount}: +{bytesRead} bytes, buffer: {bufferSeconds:F2}s ({bufferPercent:F0}%)");
-
-                        // Report progress
-                        ReportProgress();
-
-                        // Handle buffering state
-                        await HandleBufferingAsync(cancellationToken);
-                    }
-                }
-
-                DebugLogger.Log("BUFFER", $"Stream read completed, total chunks: {chunkCount}");
-                reader?.Dispose();
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] Audio processing error: {ex.Message}");
-            // Continue despite errors
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] OGG processing error: {ex.Message}");
+            DebugLogger.Log("OGG", $"Processing error: {ex.Message}");
         }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task ProcessAacDataAsync(byte[] aacData, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var dataStream = new MemoryStream(aacData, false);
+            using var reader = new StreamMediaFoundationReader(dataStream);
+
+            if (_bufferedWaveProvider == null)
+            {
+                InitializePlayback(reader.WaveFormat);
+            }
+
+            var buffer = new byte[8192];
+            int bytesRead;
+
+            while ((bytesRead = reader.Read(buffer, 0, buffer.Length)) > 0 && !cancellationToken.IsCancellationRequested)
+            {
+                if (_bufferedWaveProvider != null)
+                {
+                    _bufferedWaveProvider.AddSamples(buffer, 0, bytesRead);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] AAC processing error: {ex.Message}");
+            DebugLogger.Log("AAC", $"Processing error: {ex.Message}");
+        }
+
+        await Task.CompletedTask;
     }
 
     private void InitializePlayback(WaveFormat waveFormat)
@@ -560,5 +681,7 @@ public class NAudioRadioPlayer : IRadioPlayer
         Stop();
         _cancellationTokenSource?.Dispose();
         _httpClient?.Dispose();
+        _mp3Decompressor?.Dispose();
+        _mp3InputBuffer?.Dispose();
     }
 }
