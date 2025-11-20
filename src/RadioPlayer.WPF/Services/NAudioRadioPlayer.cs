@@ -482,7 +482,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
             {
                 frame = Mp3Frame.LoadFromStream(_mp3InputBuffer);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Not enough data for complete frame, rewind and wait for more
                 _mp3InputBuffer.Position = startPosition;
@@ -556,8 +556,8 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
             DebugLogger.Log("OPUS", "Creating Concentus OpusDecoder for OGG OPUS stream (supports non-seekable streams)");
 
             // Create OPUS decoder (48kHz, stereo is standard for OPUS)
-            var decoder = OpusDecoder.Create(48000, 2);
-            using var oggIn = new OpusOggReadStream(decoder, opusStream);
+            var decoder = new OpusDecoder(48000, 2);
+            var oggIn = new OpusOggReadStream(decoder, opusStream);
 
             DebugLogger.Log("OPUS", $"OPUS stream info: 48000Hz, 2 channels (OPUS standard)");
 
