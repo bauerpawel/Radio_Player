@@ -43,6 +43,9 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
     private AcmMp3FrameDecompressor? _mp3Decompressor;
     private readonly byte[] _pcmBuffer = new byte[65536];
 
+    // Constant for OGG buffering to prevent decoder starvation
+    private const int OggStreamBufferSize = 65536;
+
     public PlaybackState State
     {
         get => _state;
@@ -376,7 +379,9 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         // OGG codecs (OPUS/Vorbis) require continuous stream
         if (codecUpper == "OPUS" || codecUpper == "VORBIS" || codecUpper == "FLAC")
         {
-            await ProcessOggStreamAsync(stream, codec, cancellationToken);
+            // FIX: Wrap in BufferedStream for robust OGG/Opus decoding
+            using var bufferedStream = new BufferedStream(stream, OggStreamBufferSize);
+            await ProcessOggStreamAsync(bufferedStream, codec, cancellationToken);
             return;
         }
 
@@ -419,8 +424,11 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
             MetadataReceived?.Invoke(this, metadata);
         };
 
+        // FIX: Wrap the IcyFilterStream in a BufferedStream.
+        using var bufferedStream = new BufferedStream(icyFilter, OggStreamBufferSize);
+
         // Process clean OGG stream
-        await ProcessOggStreamAsync(icyFilter, codec, cancellationToken);
+        await ProcessOggStreamAsync(bufferedStream, codec, cancellationToken);
     }
 
     private async Task ProcessRawAudioDataAsync(
@@ -486,7 +494,6 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
             {
                 // Not enough data for complete frame, rewind and wait for more
                 _mp3InputBuffer.Position = startPosition;
-                DebugLogger.Log("MP3", $"Frame load failed at position {startPosition}, waiting for more data");
                 break;
             }
 
@@ -553,10 +560,16 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
     {
         try
         {
-            DebugLogger.Log("OPUS", "Creating Concentus OpusDecoder for OGG OPUS stream (supports non-seekable streams)");
+            DebugLogger.Log("OPUS", "Creating Concentus OpusDecoder for OGG OPUS stream...");
 
             // Create OPUS decoder (48kHz, stereo is standard for OPUS)
+            // Suppress obsolete warning CS0618 for OpusDecoder constructor
+            #pragma warning disable CS0618
             var decoder = new OpusDecoder(48000, 2);
+            #pragma warning restore CS0618
+            
+            // OpusOggReadStream tries to read headers immediately.
+            // BufferedStream helps here to ensure data is available.
             var oggIn = new OpusOggReadStream(decoder, opusStream);
 
             DebugLogger.Log("OPUS", $"OPUS stream info: 48000Hz, 2 channels (OPUS standard)");
@@ -573,29 +586,39 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
 
             while (!cancellationToken.IsCancellationRequested && oggIn.HasNextPacket)
             {
-                // Decode next packet (returns 16-bit PCM samples)
-                short[] packet = oggIn.DecodeNextPacket();
-
-                if (packet != null && packet.Length > 0)
+                try
                 {
-                    // Convert short[] to byte[] for BufferedWaveProvider
-                    byte[] pcmBuffer = new byte[packet.Length * 2];
-                    Buffer.BlockCopy(packet, 0, pcmBuffer, 0, pcmBuffer.Length);
+                    // Decode next packet (returns 16-bit PCM samples)
+                    short[] packet = oggIn.DecodeNextPacket();
 
-                    if (_bufferedWaveProvider != null)
+                    if (packet != null && packet.Length > 0)
                     {
-                        _bufferedWaveProvider.AddSamples(pcmBuffer, 0, pcmBuffer.Length);
-                        chunkCount++;
+                        // Convert short[] to byte[] for BufferedWaveProvider
+                        byte[] pcmBuffer = new byte[packet.Length * 2];
+                        Buffer.BlockCopy(packet, 0, pcmBuffer, 0, pcmBuffer.Length);
 
-                        if (chunkCount % 10 == 0) // Log every 10 packets
+                        if (_bufferedWaveProvider != null)
                         {
-                            var bufferSeconds = _bufferedWaveProvider.BufferedDuration.TotalSeconds;
-                            DebugLogger.Log("OPUS", $"Packet {chunkCount}: {packet.Length} samples, buffer: {bufferSeconds:F2}s");
-                        }
+                            _bufferedWaveProvider.AddSamples(pcmBuffer, 0, pcmBuffer.Length);
+                            chunkCount++;
 
-                        ReportProgress();
-                        await HandleBufferingAsync(cancellationToken);
+                            if (chunkCount % 50 == 0)
+                            {
+                                var bufferSeconds = _bufferedWaveProvider.BufferedDuration.TotalSeconds;
+                                DebugLogger.Log("OPUS", $"Packet {chunkCount}: {packet.Length} samples, buffer: {bufferSeconds:F2}s");
+                                ReportProgress();
+                            }
+
+                            await HandleBufferingAsync(cancellationToken);
+                        }
                     }
+                }
+                catch (Exception packetEx)
+                {
+                    // If a single packet fails, try to continue
+                    DebugLogger.Log("OPUS_WARN", $"Packet decode error: {packetEx.Message}");
+                    // Brief delay to allow stream to stabilize if needed
+                    await Task.Delay(10, cancellationToken);
                 }
             }
 
@@ -614,9 +637,10 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
     {
         try
         {
-            DebugLogger.Log("VORBIS", "Creating NVorbis VorbisReader for continuous OGG Vorbis stream (supports non-seekable streams)");
+            DebugLogger.Log("VORBIS", "Creating NVorbis VorbisReader...");
 
             // NVorbis.VorbisReader supports non-seekable streams (HTTP streaming)
+            // BufferedStream wrapper ensures headers are read correctly
             using var vorbisReader = new VorbisReader(vorbisStream, closeOnDispose: false);
 
             // Get audio format info
@@ -632,8 +656,9 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
                 DebugLogger.Log("VORBIS", $"Initialized Vorbis playback: {sampleRate}Hz, {channels}ch, 16-bit PCM");
             }
 
-            // Buffer for reading float samples from NVorbis (200ms worth of audio)
-            var floatBuffer = new float[channels * sampleRate / 5];
+            // Buffer for reading float samples from NVorbis (approx 100ms worth of audio)
+            // Smaller buffer allows for more responsive UI updates
+            var floatBuffer = new float[channels * sampleRate / 10];
 
             // Buffer for converted PCM samples (16-bit signed integers)
             var pcmBuffer = new byte[floatBuffer.Length * 2]; // 2 bytes per sample (16-bit)
@@ -642,13 +667,31 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
 
             while (!cancellationToken.IsCancellationRequested)
             {
-                // Read float samples from NVorbis
-                int samplesRead = vorbisReader.ReadSamples(floatBuffer, 0, floatBuffer.Length);
+                int samplesRead = 0;
+
+                try
+                {
+                    // ReadSamples can throw if the stream has a slight corruption
+                    samplesRead = vorbisReader.ReadSamples(floatBuffer, 0, floatBuffer.Length);
+                }
+                catch (Exception readEx)
+                {
+                    DebugLogger.Log("VORBIS_WARN", $"Read error (recovering): {readEx.Message}");
+                    await Task.Delay(50, cancellationToken);
+                    continue;
+                }
 
                 if (samplesRead == 0)
                 {
-                    DebugLogger.Log("VORBIS", "End of Vorbis stream reached");
-                    break;
+                    if (vorbisReader.IsEndOfStream)
+                    {
+                        DebugLogger.Log("VORBIS", "End of Vorbis stream reached");
+                        break;
+                    }
+                    
+                    // If not EOS but 0 read, wait briefly
+                    await Task.Delay(20, cancellationToken);
+                    continue;
                 }
 
                 // Convert float samples to 16-bit PCM
@@ -659,13 +702,11 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
                     _bufferedWaveProvider.AddSamples(pcmBuffer, 0, bytesConverted);
                     chunkCount++;
 
-                    if (chunkCount % 10 == 0) // Log every 10 chunks
+                    if (chunkCount % 20 == 0) // Log every 20 chunks
                     {
-                        var bufferSeconds = _bufferedWaveProvider.BufferedDuration.TotalSeconds;
-                        DebugLogger.Log("VORBIS", $"Chunk {chunkCount}: {samplesRead} samples ({bytesConverted} bytes), buffer: {bufferSeconds:F2}s");
+                        ReportProgress();
                     }
 
-                    ReportProgress();
                     await HandleBufferingAsync(cancellationToken);
                 }
             }

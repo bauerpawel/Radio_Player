@@ -1,1 +1,3 @@
+dotnet restore
+dotnet build
 dotnet publish src/RadioPlayer.WPF/RadioPlayer.WPF.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
