@@ -20,7 +20,7 @@ A modern desktop radio player built with .NET 10 and WPF, providing access to 51
 ### Core Features
 - ✅ **Browse 51,000+ radio stations** from around the world
 - ✅ **Advanced search** by name, country, language, genre, codec, bitrate
-- ✅ **Multi-format streaming** - MP3, AAC, OGG Vorbis support with NAudio
+- ✅ **Multi-format streaming** - MP3, AAC, OGG/Vorbis, OGG/Opus, OGG/FLAC support
 - ✅ **ICY metadata parsing** - displays "Now Playing" (Artist - Title)
 - ✅ **Smart buffering** - configurable buffer with automatic underrun recovery
 - ✅ **Auto-reconnect** - resilient streaming with Polly retry policy
@@ -54,6 +54,32 @@ A modern desktop radio player built with .NET 10 and WPF, providing access to 51
 - .NET 10 SDK ([Download](https://dotnet.microsoft.com/download/dotnet/10.0))
 - Visual Studio 2022 (17.10+) or JetBrains Rider (optional)
 - Windows 10/11
+- **libFLAC.dll** (required for OGG/FLAC streaming support)
+
+### Native Dependencies
+
+For **OGG/FLAC** streaming support, you need the native libFLAC library:
+
+1. **Download FLAC 1.5.0** Windows binaries:
+   - URL: https://ftp.osuosl.org/pub/xiph/releases/flac/flac-1.5.0-win.zip
+   - Or from: https://xiph.org/flac/download.html
+
+2. **Extract and copy** the appropriate DLL:
+   - For x64: Copy `bin/win64/libFLAC.dll` → `libs/flac/libFLAC.dll` in repository
+   - For x86: Copy `bin/win32/libFLAC.dll` → `libs/flac/libFLAC.dll` in repository
+
+3. **Or use package managers:**
+   ```bash
+   # vcpkg
+   vcpkg install flac:x64-windows
+
+   # Chocolatey
+   choco install flac
+   ```
+
+**Note:** The application will work without libFLAC.dll, but OGG/FLAC streams will not play. MP3, AAC, OGG/Vorbis, and OGG/Opus will work without this library.
+
+See `libs/flac/README.md` for detailed instructions.
 
 ### Running the Application
 
@@ -164,7 +190,11 @@ Based on comprehensive research for optimal performance and reliability:
 
 - **Framework**: WPF (.NET 10) for Windows desktop
 - **UI Components**: MaterialDesignThemes 5.1.0 (Material Design styling)
-- **Audio Streaming**: NAudio 2.2.1, NAudio.Vorbis 1.5.0 (MIT license)
+- **Audio Streaming**:
+  - NAudio 2.2.1 (MIT license)
+  - NAudio.Vorbis 1.5.0 for OGG/Vorbis
+  - Concentus 1.1.0 for OGG/Opus
+  - libFLAC 1.5.0+ (native library) for OGG/FLAC via P/Invoke
 - **Database**: Microsoft.Data.Sqlite 10.0.0
 - **API**: Radio Browser API (free, community-driven)
 - **Resilience**: Polly 8.5.0 for retry logic
@@ -219,8 +249,13 @@ Radio_Player/
 
 ## 🎯 Architecture Highlights
 
-### Audio Streaming (NAudio)
-- **Multi-format support**: MP3 (StreamMediaFoundationReader), AAC (MediaFoundation), OGG Vorbis (VorbisWaveReader)
+### Audio Streaming (NAudio + Native Libraries)
+- **Multi-format support**:
+  - MP3 (ACM frame-by-frame decoding)
+  - AAC (MediaFoundation)
+  - OGG/Vorbis (NVorbis library, IEEE float format)
+  - OGG/Opus (Concentus + custom OGG parser, no seeking required)
+  - OGG/FLAC (libFLAC native library via P/Invoke, streaming mode)
 - **Two-thread architecture**: Separate download and playback threads
 - **Configurable buffering**: Adjustable buffer duration (3-30s), pre-buffer duration (1-10s)
 - **Smart accumulation**: Format-specific data accumulation (32KB MP3, 64KB OGG, 32KB AAC)
@@ -443,6 +478,9 @@ This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENS
 
 - **Radio Browser API**: Free, community-driven radio station database
 - **NAudio**: Excellent .NET audio library by Mark Heath
+- **NVorbis**: OGG/Vorbis decoder for .NET
+- **Concentus**: Pure C# Opus implementation
+- **libFLAC**: Reference FLAC encoder/decoder by Xiph.Org Foundation
 - **MaterialDesignThemes**: Beautiful Material Design components for WPF
 - **Polly**: Resilience and transient-fault-handling library
 - **CommunityToolkit.Mvvm**: Modern MVVM framework
@@ -465,7 +503,7 @@ Nowoczesny odtwarzacz radia internetowego zbudowany w .NET 10 i WPF, zapewniają
 ### Podstawowe Funkcje
 - ✅ **Przeglądaj ponad 51,000 stacji radiowych** z całego świata
 - ✅ **Zaawansowane wyszukiwanie** według nazwy, kraju, języka, gatunku, kodeka, bitrate
-- ✅ **Strumieniowanie wielu formatów** - wsparcie dla MP3, AAC, OGG Vorbis z NAudio
+- ✅ **Strumieniowanie wielu formatów** - wsparcie dla MP3, AAC, OGG/Vorbis, OGG/Opus, OGG/FLAC
 - ✅ **Parsowanie metadanych ICY** - wyświetla "Teraz odtwarzane" (Artysta - Tytuł)
 - ✅ **Inteligentne buforowanie** - konfigurowalne bufory z automatycznym odzyskiwaniem
 - ✅ **Automatyczne ponowne łączenie** - odporne strumieniowanie z polityką ponawiania Polly
@@ -499,6 +537,32 @@ Nowoczesny odtwarzacz radia internetowego zbudowany w .NET 10 i WPF, zapewniają
 - .NET 10 SDK ([Pobierz](https://dotnet.microsoft.com/download/dotnet/10.0))
 - Visual Studio 2022 (17.10+) lub JetBrains Rider (opcjonalnie)
 - Windows 10/11
+- **libFLAC.dll** (wymagane dla wsparcia strumieniowania OGG/FLAC)
+
+### Natywne Zależności
+
+Dla wsparcia strumieniowania **OGG/FLAC** potrzebna jest natywna biblioteka libFLAC:
+
+1. **Pobierz FLAC 1.5.0** binaria dla Windows:
+   - URL: https://ftp.osuosl.org/pub/xiph/releases/flac/flac-1.5.0-win.zip
+   - Lub z: https://xiph.org/flac/download.html
+
+2. **Rozpakuj i skopiuj** odpowiedni plik DLL:
+   - Dla x64: Skopiuj `bin/win64/libFLAC.dll` → `libs/flac/libFLAC.dll` w repozytorium
+   - Dla x86: Skopiuj `bin/win32/libFLAC.dll` → `libs/flac/libFLAC.dll` w repozytorium
+
+3. **Lub użyj menedżerów pakietów:**
+   ```bash
+   # vcpkg
+   vcpkg install flac:x64-windows
+
+   # Chocolatey
+   choco install flac
+   ```
+
+**Uwaga:** Aplikacja będzie działać bez libFLAC.dll, ale strumienie OGG/FLAC nie będą odtwarzane. MP3, AAC, OGG/Vorbis i OGG/Opus będą działać bez tej biblioteki.
+
+Zobacz `libs/flac/README.md` dla szczegółowych instrukcji.
 
 ### Uruchamianie Aplikacji
 
@@ -607,7 +671,11 @@ Po zbudowaniu, plik `RadioPlayer.exe` może być dystrybuowany na inne komputery
 
 - **Framework**: WPF (.NET 10) dla Windows
 - **Komponenty UI**: MaterialDesignThemes 5.1.0 (stylizacja Material Design)
-- **Strumieniowanie Audio**: NAudio 2.2.1, NAudio.Vorbis 1.5.0 (licencja MIT)
+- **Strumieniowanie Audio**:
+  - NAudio 2.2.1 (licencja MIT)
+  - NAudio.Vorbis 1.5.0 dla OGG/Vorbis
+  - Concentus 1.1.0 dla OGG/Opus
+  - libFLAC 1.5.0+ (biblioteka natywna) dla OGG/FLAC przez P/Invoke
 - **Baza Danych**: Microsoft.Data.Sqlite 10.0.0
 - **API**: Radio Browser API (darmowe, napędzane przez społeczność)
 - **Odporność**: Polly 8.5.0 dla logiki ponawiania
