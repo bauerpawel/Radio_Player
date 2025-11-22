@@ -39,7 +39,7 @@ public class OggFlacUnwrappingStream : Stream
 
     public override long Seek(long offset, SeekOrigin origin)
     {
-        // Support only forward seeking (used by metadata parser)
+        // Support only forward seeking (used by metadata parser and frame decoder)
         if (origin == SeekOrigin.Current && offset >= 0)
         {
             // Skip forward by reading and discarding bytes
@@ -59,12 +59,21 @@ public class OggFlacUnwrappingStream : Stream
         }
         else if (origin == SeekOrigin.Begin)
         {
-            // Seek to absolute position (only if within metadata buffer)
-            if (_metadataBuffer.Length > 0 && offset <= _metadataBuffer.Length)
+            // Seek to absolute position
+            if (offset == _position)
             {
-                _metadataBuffer.Position = offset;
-                _position = offset;
+                // Already at target position
                 return _position;
+            }
+            else if (offset > _position)
+            {
+                // Forward seek - convert to relative seek from current position
+                return Seek(offset - _position, SeekOrigin.Current);
+            }
+            else
+            {
+                // Backward seek - not supported for non-seekable streams
+                throw new NotSupportedException($"Backward seeking (from {_position} to {offset}) is not supported for non-seekable streams");
             }
         }
 
