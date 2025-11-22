@@ -1047,17 +1047,17 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
 
         public int GetChannels()
         {
-            return (int)FLAC__stream_decoder_get_channels(_decoder);
+            return _channels;
         }
 
         public int GetSampleRate()
         {
-            return (int)FLAC__stream_decoder_get_sample_rate(_decoder);
+            return _sampleRate;
         }
 
         public int GetBitsPerSample()
         {
-            return (int)FLAC__stream_decoder_get_bits_per_sample(_decoder);
+            return _bitsPerSample;
         }
 
         private static FLAC__StreamDecoderReadStatus ReadCb(IntPtr decoder, IntPtr buffer, ref UIntPtr bytes, IntPtr client_data)
@@ -1136,7 +1136,46 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
 
         private static void MetadataCb(IntPtr decoder, IntPtr metadata, IntPtr client_data)
         {
-            // Can extract more if needed, but we use get_ methods after init
+            var handle = GCHandle.FromIntPtr(client_data);
+            var self = (FlacStreamDecoder)handle.Target;
+
+            // Read metadata type (first field in FLAC__StreamMetadata structure)
+            var metadataType = (FLAC__MetadataType)Marshal.ReadInt32(metadata);
+
+            if (metadataType == FLAC__MetadataType.FLAC__METADATA_TYPE_STREAMINFO)
+            {
+                // FLAC__StreamMetadata structure layout:
+                // - type (4 bytes, enum)
+                // - is_last (4 bytes, FLAC__bool)
+                // - length (4 bytes, unsigned)
+                // - data union (starts at offset 12)
+                //
+                // FLAC__StreamMetadata_StreamInfo layout (inside data union):
+                // - min_blocksize (4 bytes)
+                // - max_blocksize (4 bytes)
+                // - min_framesize (4 bytes)
+                // - max_framesize (4 bytes)
+                // - sample_rate (4 bytes)
+                // - channels (4 bytes)
+                // - bits_per_sample (4 bytes)
+                // - total_samples (8 bytes)
+                // - md5sum (16 bytes)
+
+                int offset = 12; // Skip type, is_last, length
+                offset += 4; // Skip min_blocksize
+                offset += 4; // Skip max_blocksize
+                offset += 4; // Skip min_framesize
+                offset += 4; // Skip max_framesize
+
+                // Read sample_rate, channels, bits_per_sample
+                self._sampleRate = Marshal.ReadInt32(metadata, offset);
+                offset += 4;
+                self._channels = Marshal.ReadInt32(metadata, offset);
+                offset += 4;
+                self._bitsPerSample = Marshal.ReadInt32(metadata, offset);
+
+                DebugLogger.Log("FLAC_METADATA", $"STREAMINFO: {self._sampleRate}Hz, {self._channels}ch, {self._bitsPerSample}-bit");
+            }
         }
 
         private static void ErrorCb(IntPtr decoder, FLAC__StreamDecoderErrorStatus status, IntPtr client_data)
@@ -1226,6 +1265,18 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate int EofCallback(IntPtr decoder, IntPtr client_data);
+
+    private enum FLAC__MetadataType
+    {
+        FLAC__METADATA_TYPE_STREAMINFO = 0,
+        FLAC__METADATA_TYPE_PADDING = 1,
+        FLAC__METADATA_TYPE_APPLICATION = 2,
+        FLAC__METADATA_TYPE_SEEKTABLE = 3,
+        FLAC__METADATA_TYPE_VORBIS_COMMENT = 4,
+        FLAC__METADATA_TYPE_CUESHEET = 5,
+        FLAC__METADATA_TYPE_PICTURE = 6,
+        FLAC__METADATA_TYPE_UNDEFINED = 7
+    }
 
     private enum FLAC__StreamDecoderInitStatus
     {
