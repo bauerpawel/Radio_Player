@@ -764,9 +764,20 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
                 throw new Exception("Failed to initialize FLAC decoder: " + initStatus);
             }
 
+            DebugLogger.Log("FLAC", "Processing FLAC metadata...");
+
+            // Process metadata to get stream info (sample rate, channels, bits per sample)
+            if (!decoder.ProcessUntilEndOfMetadata())
+            {
+                var state = decoder.GetState();
+                throw new Exception("Failed to process FLAC metadata: " + state);
+            }
+
             var sampleRate = decoder.GetSampleRate();
             var channels = decoder.GetChannels();
             var bitsPerSample = decoder.GetBitsPerSample();
+
+            DebugLogger.Log("FLAC", $"FLAC metadata processed: {sampleRate}Hz, {channels}ch, {bitsPerSample}-bit");
 
             if (_bufferedWaveProvider == null)
             {
@@ -1019,6 +1030,11 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
             return FLAC__stream_decoder_init_ogg_stream(_decoder, _readDel, null, null, null, null, _writeDel, _metadataDel, _errorDel, GCHandle.ToIntPtr(_clientDataHandle));
         }
 
+        public bool ProcessUntilEndOfMetadata()
+        {
+            return FLAC__stream_decoder_process_until_end_of_metadata(_decoder) != 0;
+        }
+
         public bool ProcessSingle()
         {
             return FLAC__stream_decoder_process_single(_decoder) != 0;
@@ -1168,6 +1184,9 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
 
     [DllImport(LibFlacDll, CallingConvention = CallingConvention.Cdecl)]
     private static extern int FLAC__stream_decoder_process_single(IntPtr decoder);
+
+    [DllImport(LibFlacDll, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int FLAC__stream_decoder_process_until_end_of_metadata(IntPtr decoder);
 
     [DllImport(LibFlacDll, CallingConvention = CallingConvention.Cdecl)]
     private static extern FLAC__StreamDecoderState FLAC__stream_decoder_get_state(IntPtr decoder);
