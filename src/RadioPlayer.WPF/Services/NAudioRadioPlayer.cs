@@ -663,7 +663,8 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
             DebugLogger.Log("FLAC", "Creating NAudio.Flac FlacReader...");
 
             // NAudio.Flac.FlacReader expects native FLAC format
-            using var flacReader = new FlacReader(unwrappedStream);
+            // Use FlacPreScanMode.None for non-seekable streams (HTTP streaming)
+            using var flacReader = new FlacReader(unwrappedStream, FlacPreScanMode.None);
 
             // Get audio format info
             var waveFormat = flacReader.WaveFormat;
