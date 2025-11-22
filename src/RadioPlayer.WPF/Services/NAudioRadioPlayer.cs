@@ -543,15 +543,36 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
 
     private async Task ProcessOggStreamAsync(Stream oggStream, string codec, CancellationToken cancellationToken)
     {
-        var codecUpper = codec.ToUpperInvariant();
+        // Auto-detect actual codec from OGG stream content
+        // OGG is just a container - it can contain Opus or Vorbis
+        DebugLogger.Log("OGG", $"Detecting actual codec in OGG stream (hint: {codec})...");
 
-        if (codecUpper == "OPUS")
+        // Wrap stream in PeekableStream to allow detection without consuming data
+        using var peekableStream = new PeekableStream(oggStream);
+
+        var detectedCodec = await OggContentDetector.DetectOggCodecAsync(peekableStream, cancellationToken);
+
+        if (detectedCodec == "UNKNOWN")
         {
-            await ProcessOpusStreamAsync(oggStream, cancellationToken);
+            // Fallback to provided codec hint
+            DebugLogger.Log("OGG", $"Could not detect codec from stream, using hint: {codec}");
+            detectedCodec = codec.ToUpperInvariant();
+        }
+        else
+        {
+            DebugLogger.Log("OGG", $"Detected codec: {detectedCodec}");
+        }
+
+        // Stop peeking - now the stream will replay buffered data then continue from inner stream
+        peekableStream.StopPeeking();
+
+        if (detectedCodec == "OPUS")
+        {
+            await ProcessOpusStreamAsync(peekableStream, cancellationToken);
         }
         else // Vorbis or FLAC (try Vorbis decoder)
         {
-            await ProcessVorbisStreamAsync(oggStream, cancellationToken);
+            await ProcessVorbisStreamAsync(peekableStream, cancellationToken);
         }
     }
 
