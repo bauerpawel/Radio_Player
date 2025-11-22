@@ -655,10 +655,15 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
     {
         try
         {
+            DebugLogger.Log("FLAC", "Unwrapping FLAC data from OGG container...");
+
+            // Unwrap FLAC data from OGG container
+            using var unwrappedStream = new OggFlacUnwrappingStream(flacStream);
+
             DebugLogger.Log("FLAC", "Creating NAudio.Flac FlacReader...");
 
-            // NAudio.Flac.FlacReader supports streaming
-            using var flacReader = new FlacReader(flacStream);
+            // NAudio.Flac.FlacReader expects native FLAC format
+            using var flacReader = new FlacReader(unwrappedStream);
 
             // Get audio format info
             var waveFormat = flacReader.WaveFormat;
