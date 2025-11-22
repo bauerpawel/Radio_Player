@@ -133,10 +133,8 @@ public class OpusStreamDecoder : IDisposable
         // Opus always decodes to 48kHz (can be resampled later if needed)
         _sampleRate = 48000;
 
-        // Initialize Opus decoder
-        #pragma warning disable CS0618
-        _decoder = new OpusDecoder(_sampleRate, _channels);
-        #pragma warning restore CS0618
+        // Initialize Opus decoder using Create factory method
+        _decoder = OpusDecoder.Create(_sampleRate, _channels);
 
         DebugLogger.Log("OPUS", $"Opus decoder initialized: {_sampleRate}Hz, {_channels}ch");
     }
