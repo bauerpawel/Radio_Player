@@ -13,6 +13,7 @@ using Polly;
 using Polly.Retry;
 using RadioPlayer.WPF.Helpers;
 using RadioPlayer.WPF.Models;
+using System.Runtime.InteropServices; // Added for P/Invoke
 
 namespace RadioPlayer.WPF.Services;
 
@@ -377,12 +378,12 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
 
         // OGG codecs (OPUS/Vorbis) require continuous stream
         if (codecUpper == "OPUS" || codecUpper == "VORBIS" || codecUpper == "FLAC")
-        {
-            // FIX: Wrap in BufferedStream for robust OGG/Opus decoding
-            using var bufferedStream = new BufferedStream(stream, OggStreamBufferSize);
-            await ProcessOggStreamAsync(bufferedStream, codec, cancellationToken);
-            return;
-        }
+            {
+                // FIX: Wrap in BufferedStream for robust OGG/Opus decoding
+                using var bufferedStream = new BufferedStream(stream, OggStreamBufferSize);
+                await ProcessOggStreamAsync(bufferedStream, codec, cancellationToken);
+                return;
+            }
 
         // For MP3/AAC: chunk-based processing
         var buffer = new byte[AppConstants.AudioBuffer.ChunkSize];
@@ -568,14 +569,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
 
         if (detectedCodec == "FLAC")
         {
-            // OGG/FLAC is not supported for HTTP streaming
-            // Available .NET FLAC libraries (including BunLabs.NAudio.Flac) require bidirectional seeking
-            // which is incompatible with non-seekable HTTP streams
-            DebugLogger.Log("FLAC_ERROR", "OGG/FLAC detected but not supported for HTTP streaming");
-            throw new NotSupportedException(
-                "OGG/FLAC format is not supported for internet radio streaming. " +
-                "FLAC decoding libraries require bidirectional seeking which HTTP streams cannot provide. " +
-                "Please try a different stream format (MP3, AAC, OGG/Opus, or OGG/Vorbis) if available.");
+            await ProcessFlacStreamAsync(peekableStream, cancellationToken);
         }
         else if (detectedCodec == "OPUS")
         {
@@ -747,6 +741,81 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         await Task.CompletedTask;
     }
 
+    private async Task ProcessFlacStreamAsync(Stream flacStream, CancellationToken cancellationToken)
+    {
+        try
+        {
+            DebugLogger.Log("FLAC", "Creating libFLAC stream decoder for OGG FLAC stream...");
+
+            Action<byte[], int> onPcmData = (pcm, length) =>
+            {
+                if (_bufferedWaveProvider != null)
+                {
+                    _bufferedWaveProvider.AddSamples(pcm, 0, length);
+                }
+            };
+
+            using var decoder = new FlacStreamDecoder(flacStream, onPcmData);
+
+            var initStatus = decoder.Initialize(true); // true for Ogg
+
+            if (initStatus != FLAC__StreamDecoderInitStatus.FLAC__STREAM_DECODER_INIT_STATUS_OK)
+            {
+                throw new Exception("Failed to initialize FLAC decoder: " + initStatus);
+            }
+
+            var sampleRate = decoder.GetSampleRate();
+            var channels = decoder.GetChannels();
+            var bitsPerSample = decoder.GetBitsPerSample();
+
+            if (_bufferedWaveProvider == null)
+            {
+                var waveFormat = new WaveFormat(sampleRate, bitsPerSample, channels);
+                InitializePlayback(waveFormat);
+                DebugLogger.Log("FLAC", $"Initialized FLAC playback: {sampleRate}Hz, {channels}ch, {bitsPerSample}-bit PCM");
+            }
+
+            int chunkCount = 0;
+
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                if (decoder.ProcessSingle())
+                {
+                    chunkCount++;
+
+                    if (chunkCount % 20 == 0)
+                    {
+                        ReportProgress();
+                    }
+
+                    await HandleBufferingAsync(cancellationToken);
+                }
+                else
+                {
+                    var state = decoder.GetState();
+                    if (state == FLAC__StreamDecoderState.FLAC__STREAM_DECODER_END_OF_STREAM)
+                    {
+                        DebugLogger.Log("FLAC", "End of FLAC stream reached");
+                        break;
+                    }
+                    else
+                    {
+                        throw new Exception("FLAC decoding error: " + state);
+                    }
+                }
+            }
+
+            DebugLogger.Log("FLAC", $"FLAC stream processing completed, total chunks: {chunkCount}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] FLAC stream processing error: {ex.Message}");
+            DebugLogger.Log("FLAC", $"Processing error: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}");
+        }
+
+        await Task.CompletedTask;
+    }
+
     private async Task ProcessAacDataAsync(byte[] aacData, CancellationToken cancellationToken)
     {
         try
@@ -910,4 +979,299 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         _mp3Decompressor?.Dispose();
         _mp3InputBuffer?.Dispose();
     }
+
+    // Added for OGG FLAC support using libFLAC P/Invoke
+    // Note: Requires libflac.dll in the application directory or PATH
+    private class FlacStreamDecoder : IDisposable
+    {
+        private IntPtr _decoder;
+        private Stream _stream;
+        private Action<byte[], int> _onPcmData;
+        private ReadCallback _readDel;
+        private WriteCallback _writeDel;
+        private MetadataCallback _metadataDel;
+        private ErrorCallback _errorDel;
+        private GCHandle _clientDataHandle;
+        private int _channels;
+        private int _sampleRate;
+        private int _bitsPerSample;
+
+        public FlacStreamDecoder(Stream stream, Action<byte[], int> onPcmData)
+        {
+            _stream = stream;
+            _onPcmData = onPcmData;
+            _decoder = FLAC__stream_decoder_new();
+            if (_decoder == IntPtr.Zero)
+            {
+                throw new Exception("Failed to create FLAC decoder");
+            }
+
+            _readDel = ReadCb;
+            _writeDel = WriteCb;
+            _metadataDel = MetadataCb;
+            _errorDel = ErrorCb;
+
+            _clientDataHandle = GCHandle.Alloc(this);
+        }
+
+        public FLAC__StreamDecoderInitStatus Initialize(bool isOgg)
+        {
+            return FLAC__stream_decoder_init_ogg_stream(_decoder, _readDel, null, null, null, null, _writeDel, _metadataDel, _errorDel, GCHandle.ToIntPtr(_clientDataHandle));
+        }
+
+        public bool ProcessSingle()
+        {
+            return FLAC__stream_decoder_process_single(_decoder) != 0;
+        }
+
+        public FLAC__StreamDecoderState GetState()
+        {
+            return FLAC__stream_decoder_get_state(_decoder);
+        }
+
+        public int GetChannels()
+        {
+            return (int)FLAC__stream_decoder_get_channels(_decoder);
+        }
+
+        public int GetSampleRate()
+        {
+            return (int)FLAC__stream_decoder_get_sample_rate(_decoder);
+        }
+
+        public int GetBitsPerSample()
+        {
+            return (int)FLAC__stream_decoder_get_bits_per_sample(_decoder);
+        }
+
+        private static FLAC__StreamDecoderReadStatus ReadCb(IntPtr decoder, IntPtr buffer, ref UIntPtr bytes, IntPtr client_data)
+        {
+            var handle = GCHandle.FromIntPtr(client_data);
+            var self = (FlacStreamDecoder)handle.Target;
+
+            var byteArr = new byte[bytes.ToUInt32()];
+
+            var read = self._stream.Read(byteArr, 0, byteArr.Length);
+
+            if (read == 0)
+            {
+                return FLAC__StreamDecoderReadStatus.FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
+            }
+
+            Marshal.Copy(byteArr, 0, buffer, read);
+
+            bytes = (UIntPtr)read;
+
+            return FLAC__StreamDecoderReadStatus.FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
+        }
+
+        private static FLAC__StreamDecoderWriteStatus WriteCb(IntPtr decoder, IntPtr frame, IntPtr[] buffer, IntPtr client_data)
+        {
+            var handle = GCHandle.FromIntPtr(client_data);
+            var self = (FlacStreamDecoder)handle.Target;
+
+            var blockSize = (int)FLAC__stream_decoder_get_blocksize(decoder);
+            var channels = self.GetChannels();
+            var bitsPerSample = self.GetBitsPerSample();
+
+            var bytePerSample = (bitsPerSample + 7) / 8; // rounded up
+            var pcmLength = blockSize * channels * bytePerSample;
+            var pcm = new byte[pcmLength];
+
+            int pos = 0;
+            for (int s = 0; s < blockSize; s++)
+            {
+                for (int c = 0; c < channels; c++)
+                {
+                    int value = Marshal.ReadInt32(buffer[c], s * 4);
+                    switch (bitsPerSample)
+                    {
+                        case 8:
+                            pcm[pos++] = (byte)(value >> 24);
+                            break;
+                        case 16:
+                            short v16 = (short)(value >> 16);
+                            var b16 = BitConverter.GetBytes(v16);
+                            pcm[pos++] = b16[0];
+                            pcm[pos++] = b16[1];
+                            break;
+                        case 24:
+                            pcm[pos++] = (byte)((value >> 8) & 0xff);
+                            pcm[pos++] = (byte)((value >> 16) & 0xff);
+                            pcm[pos++] = (byte)((value >> 24) & 0xff);
+                            break;
+                        case 32:
+                            var b32 = BitConverter.GetBytes(value);
+                            pcm[pos++] = b32[0];
+                            pcm[pos++] = b32[1];
+                            pcm[pos++] = b32[2];
+                            pcm[pos++] = b32[3];
+                            break;
+                        default:
+                            throw new NotSupportedException("Unsupported bits per sample: " + bitsPerSample);
+                    }
+                }
+            }
+
+            self._onPcmData(pcm, pos);
+
+            return FLAC__StreamDecoderWriteStatus.FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
+        }
+
+        private static void MetadataCb(IntPtr decoder, IntPtr metadata, IntPtr client_data)
+        {
+            // Can extract more if needed, but we use get_ methods after init
+        }
+
+        private static void ErrorCb(IntPtr decoder, FLAC__StreamDecoderErrorStatus status, IntPtr client_data)
+        {
+            DebugLogger.Log("FLAC_ERROR", "Error: " + status);
+        }
+
+        public void Dispose()
+        {
+            if (_decoder != IntPtr.Zero)
+            {
+                FLAC__stream_decoder_finish(_decoder);
+                FLAC__stream_decoder_delete(_decoder);
+                _decoder = IntPtr.Zero;
+            }
+
+            _clientDataHandle.Free();
+        }
+    }
+
+    // P/Invoke definitions for libFLAC
+    private const string LibFlacDll = "libflac.dll"; // Adjust if necessary, e.g. "libflac-8.dll"
+
+    [DllImport(LibFlacDll, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr FLAC__stream_decoder_new();
+
+    [DllImport(LibFlacDll, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void FLAC__stream_decoder_delete(IntPtr decoder);
+
+    [DllImport(LibFlacDll, CallingConvention = CallingConvention.Cdecl)]
+    private static extern FLAC__StreamDecoderInitStatus FLAC__stream_decoder_init_ogg_stream(
+        IntPtr decoder,
+        ReadCallback read_callback,
+        SeekCallback seek_callback,
+        TellCallback tell_callback,
+        LengthCallback length_callback,
+        EofCallback eof_callback,
+        WriteCallback write_callback,
+        MetadataCallback metadata_callback,
+        ErrorCallback error_callback,
+        IntPtr client_data);
+
+    [DllImport(LibFlacDll, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int FLAC__stream_decoder_finish(IntPtr decoder);
+
+    [DllImport(LibFlacDll, CallingConvention = CallingConvention.Cdecl)]
+    private static extern int FLAC__stream_decoder_process_single(IntPtr decoder);
+
+    [DllImport(LibFlacDll, CallingConvention = CallingConvention.Cdecl)]
+    private static extern FLAC__StreamDecoderState FLAC__stream_decoder_get_state(IntPtr decoder);
+
+    [DllImport(LibFlacDll, CallingConvention = CallingConvention.Cdecl)]
+    private static extern uint FLAC__stream_decoder_get_channels(IntPtr decoder);
+
+    [DllImport(LibFlacDll, CallingConvention = CallingConvention.Cdecl)]
+    private static extern uint FLAC__stream_decoder_get_bits_per_sample(IntPtr decoder);
+
+    [DllImport(LibFlacDll, CallingConvention = CallingConvention.Cdecl)]
+    private static extern uint FLAC__stream_decoder_get_sample_rate(IntPtr decoder);
+
+    [DllImport(LibFlacDll, CallingConvention = CallingConvention.Cdecl)]
+    private static extern uint FLAC__stream_decoder_get_blocksize(IntPtr decoder);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate FLAC__StreamDecoderReadStatus ReadCallback(IntPtr decoder, IntPtr buffer, ref UIntPtr bytes, IntPtr client_data);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate FLAC__StreamDecoderWriteStatus WriteCallback(IntPtr decoder, IntPtr frame, IntPtr[] buffer, IntPtr client_data);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void MetadataCallback(IntPtr decoder, IntPtr metadata, IntPtr client_data);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate void ErrorCallback(IntPtr decoder, FLAC__StreamDecoderErrorStatus status, IntPtr client_data);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate FLAC__StreamDecoderSeekStatus SeekCallback(IntPtr decoder, ulong absolute_byte_offset, IntPtr client_data);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate FLAC__StreamDecoderTellStatus TellCallback(IntPtr decoder, ref ulong absolute_byte_offset, IntPtr client_data);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate FLAC__StreamDecoderLengthStatus LengthCallback(IntPtr decoder, ref ulong stream_length, IntPtr client_data);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int EofCallback(IntPtr decoder, IntPtr client_data);
+
+    private enum FLAC__StreamDecoderInitStatus
+    {
+        FLAC__STREAM_DECODER_INIT_STATUS_OK,
+        FLAC__STREAM_DECODER_INIT_STATUS_UNSUPPORTED_CONTAINER,
+        FLAC__STREAM_DECODER_INIT_STATUS_INVALID_CALLBACKS,
+        FLAC__STREAM_DECODER_INIT_STATUS_MEMORY_ALLOCATION_ERROR,
+        FLAC__STREAM_DECODER_INIT_STATUS_ERROR_OPENING_FILE,
+        FLAC__STREAM_DECODER_INIT_STATUS_ALREADY_INITIALIZED
+    }
+
+    private enum FLAC__StreamDecoderState
+    {
+        FLAC__STREAM_DECODER_SEARCH_FOR_METADATA,
+        FLAC__STREAM_DECODER_READ_METADATA,
+        FLAC__STREAM_DECODER_SEARCH_FOR_FRAME_SYNC,
+        FLAC__STREAM_DECODER_READ_FRAME,
+        FLAC__STREAM_DECODER_END_OF_STREAM,
+        FLAC__STREAM_DECODER_OGG_ERROR,
+        FLAC__STREAM_DECODER_SEEK_ERROR,
+        FLAC__STREAM_DECODER_ABORTED,
+        FLAC__STREAM_DECODER_MEMORY_ALLOCATION_ERROR,
+        FLAC__STREAM_DECODER_UNINITIALIZED
+    }
+
+    private enum FLAC__StreamDecoderReadStatus
+    {
+        FLAC__STREAM_DECODER_READ_STATUS_CONTINUE,
+        FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM,
+        FLAC__STREAM_DECODER_READ_STATUS_ABORT
+    }
+
+    private enum FLAC__StreamDecoderWriteStatus
+    {
+        FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE,
+        FLAC__STREAM_DECODER_WRITE_STATUS_ABORT
+    }
+
+    private enum FLAC__StreamDecoderErrorStatus
+    {
+        FLAC__STREAM_DECODER_ERROR_STATUS_LOST_SYNC,
+        FLAC__STREAM_DECODER_ERROR_STATUS_BAD_HEADER,
+        FLAC__STREAM_DECODER_ERROR_STATUS_FRAME_CRC_MISMATCH,
+        FLAC__STREAM_DECODER_ERROR_STATUS_UNPARSEABLE_STREAM
+    }
+
+    private enum FLAC__StreamDecoderSeekStatus
+    {
+        FLAC__STREAM_DECODER_SEEK_STATUS_OK,
+        FLAC__STREAM_DECODER_SEEK_STATUS_ERROR,
+        FLAC__STREAM_DECODER_SEEK_STATUS_UNSUPPORTED
+    }
+
+    private enum FLAC__StreamDecoderTellStatus
+    {
+        FLAC__STREAM_DECODER_TELL_STATUS_OK,
+        FLAC__STREAM_DECODER_TELL_STATUS_ERROR,
+        FLAC__STREAM_DECODER_TELL_STATUS_UNSUPPORTED
+    }
+
+    private enum FLAC__StreamDecoderLengthStatus
+    {
+        FLAC__STREAM_DECODER_LENGTH_STATUS_OK,
+        FLAC__STREAM_DECODER_LENGTH_STATUS_ERROR,
+        FLAC__STREAM_DECODER_LENGTH_STATUS_UNSUPPORTED
+    }
+
 }
