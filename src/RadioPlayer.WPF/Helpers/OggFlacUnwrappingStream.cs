@@ -8,6 +8,7 @@ namespace RadioPlayer.WPF.Helpers;
 /// <summary>
 /// Stream wrapper that unwraps FLAC data from OGG container
 /// Reads OGG pages and extracts raw FLAC packets, presenting them as a continuous FLAC stream
+/// Supports limited forward-only seeking for metadata parsing
 /// </summary>
 public class OggFlacUnwrappingStream : Stream
 {
@@ -16,22 +17,58 @@ public class OggFlacUnwrappingStream : Stream
     private MemoryStream _currentPacketBuffer;
     private bool _headerWritten = false;
     private long _position = 0;
+    private MemoryStream _metadataBuffer; // Buffer for metadata blocks to enable seeking
 
     public OggFlacUnwrappingStream(Stream innerStream)
     {
         _innerStream = innerStream ?? throw new ArgumentNullException(nameof(innerStream));
         _oggParser = new OggStreamParser();
         _currentPacketBuffer = new MemoryStream();
+        _metadataBuffer = new MemoryStream();
     }
 
     public override bool CanRead => true;
-    public override bool CanSeek => false;
+    public override bool CanSeek => true; // Enable seeking for metadata parsing (forward-only)
     public override bool CanWrite => false;
     public override long Length => throw new NotSupportedException();
     public override long Position
     {
         get => _position;
-        set => throw new NotSupportedException();
+        set => Seek(value, SeekOrigin.Begin);
+    }
+
+    public override long Seek(long offset, SeekOrigin origin)
+    {
+        // Support only forward seeking (used by metadata parser)
+        if (origin == SeekOrigin.Current && offset >= 0)
+        {
+            // Skip forward by reading and discarding bytes
+            var skipBuffer = new byte[Math.Min(8192, offset)];
+            long remaining = offset;
+
+            while (remaining > 0)
+            {
+                int toRead = (int)Math.Min(skipBuffer.Length, remaining);
+                int bytesRead = Read(skipBuffer, 0, toRead);
+                if (bytesRead == 0)
+                    break; // End of stream
+                remaining -= bytesRead;
+            }
+
+            return _position;
+        }
+        else if (origin == SeekOrigin.Begin)
+        {
+            // Seek to absolute position (only if within metadata buffer)
+            if (_metadataBuffer.Length > 0 && offset <= _metadataBuffer.Length)
+            {
+                _metadataBuffer.Position = offset;
+                _position = offset;
+                return _position;
+            }
+        }
+
+        throw new NotSupportedException($"Seeking with origin={origin} and offset={offset} is not supported for non-seekable streams");
     }
 
     public override int Read(byte[] buffer, int offset, int count)
@@ -106,7 +143,6 @@ public class OggFlacUnwrappingStream : Stream
     public override void Flush() { }
     public override Task FlushAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
     public override void SetLength(long value) => throw new NotSupportedException();
     public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 
@@ -115,6 +151,7 @@ public class OggFlacUnwrappingStream : Stream
         if (disposing)
         {
             _currentPacketBuffer?.Dispose();
+            _metadataBuffer?.Dispose();
             // Don't dispose _innerStream - let the caller manage it
         }
         base.Dispose(disposing);
