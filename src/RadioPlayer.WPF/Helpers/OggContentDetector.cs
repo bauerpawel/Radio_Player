@@ -73,6 +73,11 @@ public static class OggContentDetector
                 DebugLogger.Log("DETECT", "OGG stream contains VORBIS codec");
                 return "VORBIS";
             }
+            else if (payload.StartsWith("FLAC") || payload.Contains("\x7FFLAC"))
+            {
+                DebugLogger.Log("DETECT", "OGG stream contains FLAC codec");
+                return "FLAC";
+            }
             else
             {
                 DebugLogger.Log("DETECT", $"OGG stream contains unknown codec (signature: {payload})");

@@ -21,6 +21,7 @@
     <!-- Audio Streaming -->
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
+    <PackageReference Include="NAudio.Flac" Version="1.0.5702" />
     <PackageReference Include="Concentus" Version="1.1.0" />
 
     <!-- Database -->

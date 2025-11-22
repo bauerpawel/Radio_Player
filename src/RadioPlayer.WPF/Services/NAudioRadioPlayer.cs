@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using NAudio.Wave;
 using NAudio.Wave.Compression;
 using NVorbis; // For OGG Vorbis decoding (non-seekable HTTP streams)
+using NAudio.Flac; // For OGG FLAC decoding
 using Concentus.Structs; // For Opus decoder (used by OpusStreamDecoder)
 using Polly;
 using Polly.Retry;
@@ -570,7 +571,11 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         {
             await ProcessOpusStreamAsync(peekableStream, cancellationToken);
         }
-        else // Vorbis or FLAC (try Vorbis decoder)
+        else if (detectedCodec == "FLAC")
+        {
+            await ProcessFlacStreamAsync(peekableStream, cancellationToken);
+        }
+        else // Vorbis (default)
         {
             await ProcessVorbisStreamAsync(peekableStream, cancellationToken);
         }
@@ -641,6 +646,79 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         {
             System.Diagnostics.Debug.WriteLine($"[RadioPlayer] OPUS stream processing error: {ex.Message}");
             DebugLogger.Log("OPUS", $"Processing error: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}");
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task ProcessFlacStreamAsync(Stream flacStream, CancellationToken cancellationToken)
+    {
+        try
+        {
+            DebugLogger.Log("FLAC", "Creating NAudio.Flac FlacReader...");
+
+            // NAudio.Flac.FlacReader supports streaming
+            using var flacReader = new FlacReader(flacStream);
+
+            // Get audio format info
+            var waveFormat = flacReader.WaveFormat;
+            DebugLogger.Log("FLAC", $"FLAC stream info: {waveFormat.SampleRate}Hz, {waveFormat.Channels} channels, {waveFormat.BitsPerSample}-bit");
+
+            // Initialize playback
+            if (_bufferedWaveProvider == null)
+            {
+                InitializePlayback(waveFormat);
+                DebugLogger.Log("FLAC", $"Initialized FLAC playback: {waveFormat.SampleRate}Hz, {waveFormat.Channels}ch, {waveFormat.BitsPerSample}-bit PCM");
+            }
+
+            // Buffer for reading PCM samples from FLAC (approx 100ms worth of audio)
+            int bufferSize = waveFormat.AverageBytesPerSecond / 10;
+            var pcmBuffer = new byte[bufferSize];
+
+            int chunkCount = 0;
+
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                int bytesRead = 0;
+
+                try
+                {
+                    // Read can throw if the stream has corruption
+                    bytesRead = flacReader.Read(pcmBuffer, 0, pcmBuffer.Length);
+                }
+                catch (Exception readEx)
+                {
+                    DebugLogger.Log("FLAC_WARN", $"Read error (recovering): {readEx.Message}");
+                    await Task.Delay(50, cancellationToken);
+                    continue;
+                }
+
+                if (bytesRead == 0)
+                {
+                    DebugLogger.Log("FLAC", "End of FLAC stream reached");
+                    break;
+                }
+
+                if (_bufferedWaveProvider != null && bytesRead > 0)
+                {
+                    _bufferedWaveProvider.AddSamples(pcmBuffer, 0, bytesRead);
+                    chunkCount++;
+
+                    if (chunkCount % 20 == 0) // Log every 20 chunks
+                    {
+                        ReportProgress();
+                    }
+
+                    await HandleBufferingAsync(cancellationToken);
+                }
+            }
+
+            DebugLogger.Log("FLAC", $"FLAC stream processing completed, total chunks: {chunkCount}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] FLAC stream processing error: {ex.Message}");
+            DebugLogger.Log("FLAC", $"Processing error: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}");
         }
 
         await Task.CompletedTask;
