@@ -404,7 +404,3 @@ FodyWeavers.xsd
 *.db-wal
 radioplayer.db*
 
-# Native libraries (users must download these)
-libs/flac/libFLAC.dll
-libs/flac/*.dll
-!libs/flac/README.md

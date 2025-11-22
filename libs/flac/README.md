@@ -2,11 +2,11 @@
 
 This directory should contain the native libFLAC library (DLL) required for OGG/FLAC streaming support.
 
-## Required File
+## Included File
 
-- **Windows x64**: `libFLAC.dll` (from FLAC 1.5.0 or newer)
+- **Windows x64**: `libFLAC.dll` (from FLAC 1.5.0)
 
-## Download Instructions
+## Download Instructions For New Version
 
 ### Option 1: Official FLAC Release (Recommended)
 
@@ -19,22 +19,6 @@ This directory should contain the native libFLAC library (DLL) required for OGG/
 3. Copy the appropriate DLL to this directory:
    - For x64: Copy `bin/win64/libFLAC.dll` → `libs/flac/libFLAC.dll`
    - For x86: Copy `bin/win32/libFLAC.dll` → `libs/flac/libFLAC.dll`
-
-### Option 2: vcpkg
-
-```bash
-vcpkg install flac:x64-windows
-```
-
-Then copy the DLL from vcpkg's installed directory.
-
-### Option 3: Chocolatey
-
-```bash
-choco install flac
-```
-
-Then copy `libFLAC.dll` from the installation directory.
 
 ## Build Integration
 
