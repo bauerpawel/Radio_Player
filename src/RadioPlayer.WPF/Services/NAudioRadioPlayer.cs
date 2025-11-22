@@ -1107,22 +1107,23 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
             {
                 for (int c = 0; c < channels; c++)
                 {
+                    // FLAC samples are right-justified (stored in lower bits)
                     int value = Marshal.ReadInt32(channelBuffers[c], s * 4);
                     switch (bitsPerSample)
                     {
                         case 8:
-                            pcm[pos++] = (byte)(value >> 24);
+                            pcm[pos++] = (byte)value;
                             break;
                         case 16:
-                            short v16 = (short)(value >> 16);
+                            short v16 = (short)value;
                             var b16 = BitConverter.GetBytes(v16);
                             pcm[pos++] = b16[0];
                             pcm[pos++] = b16[1];
                             break;
                         case 24:
+                            pcm[pos++] = (byte)(value & 0xff);
                             pcm[pos++] = (byte)((value >> 8) & 0xff);
                             pcm[pos++] = (byte)((value >> 16) & 0xff);
-                            pcm[pos++] = (byte)((value >> 24) & 0xff);
                             break;
                         case 32:
                             var b32 = BitConverter.GetBytes(value);
