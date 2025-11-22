@@ -50,4 +50,14 @@
     <Folder Include="Resources\" />
   </ItemGroup>
 
+  <!-- Copy native libFLAC.dll if present -->
+  <Target Name="CopyNativeLibraries" AfterTargets="Build">
+    <ItemGroup>
+      <LibFlacDll Include="..\..\libs\flac\libFLAC.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(LibFlacDll)" DestinationFolder="$(OutDir)" Condition="Exists('%(FullPath)')" SkipUnchangedFiles="true" />
+    <Message Text="Copied libFLAC.dll to output directory" Importance="high" Condition="Exists('@(LibFlacDll)')" />
+    <Message Text="libFLAC.dll not found in libs/flac - OGG/FLAC streaming will not work. See libs/flac/README.md" Importance="high" Condition="!Exists('@(LibFlacDll)')" />
+  </Target>
+
 </Project>
