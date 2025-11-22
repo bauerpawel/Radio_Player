@@ -1063,7 +1063,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         private static FLAC__StreamDecoderReadStatus ReadCb(IntPtr decoder, IntPtr buffer, ref UIntPtr bytes, IntPtr client_data)
         {
             var handle = GCHandle.FromIntPtr(client_data);
-            var self = (FlacStreamDecoder)handle.Target;
+            var self = (FlacStreamDecoder)handle.Target!;
 
             var byteArr = new byte[bytes.ToUInt32()];
 
@@ -1084,7 +1084,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         private static FLAC__StreamDecoderWriteStatus WriteCb(IntPtr decoder, IntPtr frame, IntPtr buffer, IntPtr client_data)
         {
             var handle = GCHandle.FromIntPtr(client_data);
-            var self = (FlacStreamDecoder)handle.Target;
+            var self = (FlacStreamDecoder)handle.Target!;
 
             var blockSize = (int)FLAC__stream_decoder_get_blocksize(decoder);
             var channels = self.GetChannels();
@@ -1146,7 +1146,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         private static void MetadataCb(IntPtr decoder, IntPtr metadata, IntPtr client_data)
         {
             var handle = GCHandle.FromIntPtr(client_data);
-            var self = (FlacStreamDecoder)handle.Target;
+            var self = (FlacStreamDecoder)handle.Target!;
 
             // Read metadata type (first field in FLAC__StreamMetadata structure)
             var metadataType = (FLAC__MetadataType)Marshal.ReadInt32(metadata);
@@ -1218,10 +1218,10 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
     private static extern FLAC__StreamDecoderInitStatus FLAC__stream_decoder_init_ogg_stream(
         IntPtr decoder,
         ReadCallback read_callback,
-        SeekCallback seek_callback,
-        TellCallback tell_callback,
-        LengthCallback length_callback,
-        EofCallback eof_callback,
+        SeekCallback? seek_callback,
+        TellCallback? tell_callback,
+        LengthCallback? length_callback,
+        EofCallback? eof_callback,
         WriteCallback write_callback,
         MetadataCallback metadata_callback,
         ErrorCallback error_callback,
