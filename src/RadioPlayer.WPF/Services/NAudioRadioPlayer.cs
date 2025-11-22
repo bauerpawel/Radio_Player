@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using NAudio.Wave;
 using NAudio.Wave.Compression;
 using NVorbis; // For OGG Vorbis decoding (non-seekable HTTP streams)
-using NAudio.Flac; // For OGG FLAC decoding (BunLabs.NAudio.Flac package, NAudio 2.x compatible)
 using Concentus.Structs; // For Opus decoder (used by OpusStreamDecoder)
 using Polly;
 using Polly.Retry;
@@ -567,13 +566,20 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         // Stop peeking - now the stream will replay buffered data then continue from inner stream
         peekableStream.StopPeeking();
 
-        if (detectedCodec == "OPUS")
+        if (detectedCodec == "FLAC")
+        {
+            // OGG/FLAC is not supported for HTTP streaming
+            // Available .NET FLAC libraries (including BunLabs.NAudio.Flac) require bidirectional seeking
+            // which is incompatible with non-seekable HTTP streams
+            DebugLogger.Log("FLAC_ERROR", "OGG/FLAC detected but not supported for HTTP streaming");
+            throw new NotSupportedException(
+                "OGG/FLAC format is not supported for internet radio streaming. " +
+                "FLAC decoding libraries require bidirectional seeking which HTTP streams cannot provide. " +
+                "Please try a different stream format (MP3, AAC, OGG/Opus, or OGG/Vorbis) if available.");
+        }
+        else if (detectedCodec == "OPUS")
         {
             await ProcessOpusStreamAsync(peekableStream, cancellationToken);
-        }
-        else if (detectedCodec == "FLAC")
-        {
-            await ProcessFlacStreamAsync(peekableStream, cancellationToken);
         }
         else // Vorbis (default)
         {
@@ -646,85 +652,6 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         {
             System.Diagnostics.Debug.WriteLine($"[RadioPlayer] OPUS stream processing error: {ex.Message}");
             DebugLogger.Log("OPUS", $"Processing error: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}");
-        }
-
-        await Task.CompletedTask;
-    }
-
-    private async Task ProcessFlacStreamAsync(Stream flacStream, CancellationToken cancellationToken)
-    {
-        try
-        {
-            DebugLogger.Log("FLAC", "Unwrapping FLAC data from OGG container...");
-
-            // Unwrap FLAC data from OGG container
-            using var unwrappedStream = new OggFlacUnwrappingStream(flacStream);
-
-            DebugLogger.Log("FLAC", "Creating NAudio.Flac FlacReader...");
-
-            // NAudio.Flac.FlacReader expects native FLAC format
-            // Use FlacPreScanMode.None for non-seekable streams (HTTP streaming)
-            using var flacReader = new FlacReader(unwrappedStream, FlacPreScanMode.None);
-
-            // Get audio format info
-            var waveFormat = flacReader.WaveFormat;
-            DebugLogger.Log("FLAC", $"FLAC stream info: {waveFormat.SampleRate}Hz, {waveFormat.Channels} channels, {waveFormat.BitsPerSample}-bit");
-
-            // Initialize playback
-            if (_bufferedWaveProvider == null)
-            {
-                InitializePlayback(waveFormat);
-                DebugLogger.Log("FLAC", $"Initialized FLAC playback: {waveFormat.SampleRate}Hz, {waveFormat.Channels}ch, {waveFormat.BitsPerSample}-bit PCM");
-            }
-
-            // Buffer for reading PCM samples from FLAC (approx 100ms worth of audio)
-            int bufferSize = waveFormat.AverageBytesPerSecond / 10;
-            var pcmBuffer = new byte[bufferSize];
-
-            int chunkCount = 0;
-
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                int bytesRead = 0;
-
-                try
-                {
-                    // Read can throw if the stream has corruption
-                    bytesRead = flacReader.Read(pcmBuffer, 0, pcmBuffer.Length);
-                }
-                catch (Exception readEx)
-                {
-                    DebugLogger.Log("FLAC_WARN", $"Read error (recovering): {readEx.Message}");
-                    await Task.Delay(50, cancellationToken);
-                    continue;
-                }
-
-                if (bytesRead == 0)
-                {
-                    DebugLogger.Log("FLAC", "End of FLAC stream reached");
-                    break;
-                }
-
-                if (_bufferedWaveProvider != null && bytesRead > 0)
-                {
-                    _bufferedWaveProvider.AddSamples(pcmBuffer, 0, bytesRead);
-                    chunkCount++;
-
-                    if (chunkCount % 20 == 0) // Log every 20 chunks
-                    {
-                        ReportProgress();
-                    }
-
-                    await HandleBufferingAsync(cancellationToken);
-                }
-            }
-
-            DebugLogger.Log("FLAC", $"FLAC stream processing completed, total chunks: {chunkCount}");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[RadioPlayer] FLAC stream processing error: {ex.Message}");
-            DebugLogger.Log("FLAC", $"Processing error: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}");
         }
 
         await Task.CompletedTask;
