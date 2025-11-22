@@ -8,8 +8,7 @@ using System.Threading.Tasks;
 using NAudio.Wave;
 using NAudio.Wave.Compression;
 using NVorbis; // For OGG Vorbis decoding (non-seekable HTTP streams)
-using Concentus.Oggfile; // For OGG OPUS decoding
-using Concentus.Structs; // For Opus decoder
+using Concentus.Structs; // For Opus decoder (used by OpusStreamDecoder)
 using Polly;
 using Polly.Retry;
 using RadioPlayer.WPF.Helpers;
@@ -560,57 +559,50 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
     {
         try
         {
-            DebugLogger.Log("OPUS", "Creating Concentus OpusDecoder for OGG OPUS stream...");
+            DebugLogger.Log("OPUS", "Creating streaming Opus decoder for OGG OPUS stream...");
 
-            // Create OPUS decoder (48kHz, stereo is standard for OPUS)
-            // Suppress obsolete warning CS0618 for OpusDecoder constructor
-            #pragma warning disable CS0618
-            var decoder = new OpusDecoder(48000, 2);
-            #pragma warning restore CS0618
-            
-            // OpusOggReadStream tries to read headers immediately.
-            // BufferedStream helps here to ensure data is available.
-            var oggIn = new OpusOggReadStream(decoder, opusStream);
-
-            DebugLogger.Log("OPUS", $"OPUS stream info: 48000Hz, 2 channels (OPUS standard)");
-
-            // Initialize playback with 16-bit PCM format
-            if (_bufferedWaveProvider == null)
-            {
-                var waveFormat = new WaveFormat(48000, 16, 2);
-                InitializePlayback(waveFormat);
-                DebugLogger.Log("OPUS", "Initialized OPUS playback: 48000Hz, 2ch, 16-bit PCM");
-            }
+            using var opusDecoder = new OpusStreamDecoder();
 
             int chunkCount = 0;
 
-            while (!cancellationToken.IsCancellationRequested && oggIn.HasNextPacket)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    // Decode next packet (returns 16-bit PCM samples)
-                    short[] packet = oggIn.DecodeNextPacket();
+                    // Decode next packet from OGG stream
+                    short[]? packet = await opusDecoder.DecodeNextPacketAsync(opusStream, cancellationToken);
 
-                    if (packet != null && packet.Length > 0)
+                    if (packet == null)
+                    {
+                        DebugLogger.Log("OPUS", "End of stream reached");
+                        break;
+                    }
+
+                    // Initialize playback on first packet (after headers are parsed)
+                    if (_bufferedWaveProvider == null && opusDecoder.IsInitialized)
+                    {
+                        var waveFormat = new WaveFormat(opusDecoder.SampleRate, 16, opusDecoder.Channels);
+                        InitializePlayback(waveFormat);
+                        DebugLogger.Log("OPUS", $"Initialized OPUS playback: {opusDecoder.SampleRate}Hz, {opusDecoder.Channels}ch, 16-bit PCM");
+                    }
+
+                    if (packet.Length > 0 && _bufferedWaveProvider != null)
                     {
                         // Convert short[] to byte[] for BufferedWaveProvider
                         byte[] pcmBuffer = new byte[packet.Length * 2];
                         Buffer.BlockCopy(packet, 0, pcmBuffer, 0, pcmBuffer.Length);
 
-                        if (_bufferedWaveProvider != null)
+                        _bufferedWaveProvider.AddSamples(pcmBuffer, 0, pcmBuffer.Length);
+                        chunkCount++;
+
+                        if (chunkCount % 50 == 0)
                         {
-                            _bufferedWaveProvider.AddSamples(pcmBuffer, 0, pcmBuffer.Length);
-                            chunkCount++;
-
-                            if (chunkCount % 50 == 0)
-                            {
-                                var bufferSeconds = _bufferedWaveProvider.BufferedDuration.TotalSeconds;
-                                DebugLogger.Log("OPUS", $"Packet {chunkCount}: {packet.Length} samples, buffer: {bufferSeconds:F2}s");
-                                ReportProgress();
-                            }
-
-                            await HandleBufferingAsync(cancellationToken);
+                            var bufferSeconds = _bufferedWaveProvider.BufferedDuration.TotalSeconds;
+                            DebugLogger.Log("OPUS", $"Packet {chunkCount}: {packet.Length} samples, buffer: {bufferSeconds:F2}s");
+                            ReportProgress();
                         }
+
+                        await HandleBufferingAsync(cancellationToken);
                     }
                 }
                 catch (Exception packetEx)
