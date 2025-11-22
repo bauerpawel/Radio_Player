@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using NAudio.Wave;
 using NAudio.Wave.Compression;
 using NVorbis; // For OGG Vorbis decoding (non-seekable HTTP streams)
-using NAudio.Flac; // For OGG FLAC decoding
+using BunLabs.NAudio.Flac; // For OGG FLAC decoding (NAudio 2.x compatible)
 using Concentus.Structs; // For Opus decoder (used by OpusStreamDecoder)
 using Polly;
 using Polly.Retry;
