@@ -1081,7 +1081,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
             return FLAC__StreamDecoderReadStatus.FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
         }
 
-        private static FLAC__StreamDecoderWriteStatus WriteCb(IntPtr decoder, IntPtr frame, IntPtr[] buffer, IntPtr client_data)
+        private static FLAC__StreamDecoderWriteStatus WriteCb(IntPtr decoder, IntPtr frame, IntPtr buffer, IntPtr client_data)
         {
             var handle = GCHandle.FromIntPtr(client_data);
             var self = (FlacStreamDecoder)handle.Target;
@@ -1094,12 +1094,20 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
             var pcmLength = blockSize * channels * bytePerSample;
             var pcm = new byte[pcmLength];
 
+            // buffer is a pointer to an array of pointers (one per channel)
+            // Read the channel pointers from the buffer array
+            IntPtr[] channelBuffers = new IntPtr[channels];
+            for (int c = 0; c < channels; c++)
+            {
+                channelBuffers[c] = Marshal.ReadIntPtr(buffer, c * IntPtr.Size);
+            }
+
             int pos = 0;
             for (int s = 0; s < blockSize; s++)
             {
                 for (int c = 0; c < channels; c++)
                 {
-                    int value = Marshal.ReadInt32(buffer[c], s * 4);
+                    int value = Marshal.ReadInt32(channelBuffers[c], s * 4);
                     switch (bitsPerSample)
                     {
                         case 8:
@@ -1246,7 +1254,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
     private delegate FLAC__StreamDecoderReadStatus ReadCallback(IntPtr decoder, IntPtr buffer, ref UIntPtr bytes, IntPtr client_data);
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate FLAC__StreamDecoderWriteStatus WriteCallback(IntPtr decoder, IntPtr frame, IntPtr[] buffer, IntPtr client_data);
+    private delegate FLAC__StreamDecoderWriteStatus WriteCallback(IntPtr decoder, IntPtr frame, IntPtr buffer, IntPtr client_data);
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate void MetadataCallback(IntPtr decoder, IntPtr metadata, IntPtr client_data);
