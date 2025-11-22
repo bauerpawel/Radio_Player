@@ -672,20 +672,20 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
             var sampleRate = vorbisReader.SampleRate;
             DebugLogger.Log("VORBIS", $"Vorbis stream info: {sampleRate}Hz, {channels} channels");
 
-            // Initialize playback with 16-bit PCM format
+            // Initialize playback with IEEE float format (native NVorbis format)
+            // This avoids unnecessary float→int16 conversion and preserves quality
             if (_bufferedWaveProvider == null)
             {
-                var waveFormat = new WaveFormat(sampleRate, 16, channels);
+                var waveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, channels);
                 InitializePlayback(waveFormat);
-                DebugLogger.Log("VORBIS", $"Initialized Vorbis playback: {sampleRate}Hz, {channels}ch, 16-bit PCM");
+                DebugLogger.Log("VORBIS", $"Initialized Vorbis playback: {sampleRate}Hz, {channels}ch, IEEE Float");
             }
 
             // Buffer for reading float samples from NVorbis (approx 100ms worth of audio)
-            // Smaller buffer allows for more responsive UI updates
             var floatBuffer = new float[channels * sampleRate / 10];
 
-            // Buffer for converted PCM samples (16-bit signed integers)
-            var pcmBuffer = new byte[floatBuffer.Length * 2]; // 2 bytes per sample (16-bit)
+            // Buffer for byte conversion (4 bytes per float sample)
+            var byteBuffer = new byte[floatBuffer.Length * sizeof(float)];
 
             int chunkCount = 0;
 
@@ -712,18 +712,19 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
                         DebugLogger.Log("VORBIS", "End of Vorbis stream reached");
                         break;
                     }
-                    
+
                     // If not EOS but 0 read, wait briefly
                     await Task.Delay(20, cancellationToken);
                     continue;
                 }
 
-                // Convert float samples to 16-bit PCM
-                int bytesConverted = ConvertFloatToPcm16(floatBuffer, samplesRead, pcmBuffer);
+                // Convert float[] to byte[] using Buffer.BlockCopy (no quality loss)
+                int bytesToAdd = samplesRead * sizeof(float);
+                Buffer.BlockCopy(floatBuffer, 0, byteBuffer, 0, bytesToAdd);
 
-                if (_bufferedWaveProvider != null && bytesConverted > 0)
+                if (_bufferedWaveProvider != null && bytesToAdd > 0)
                 {
-                    _bufferedWaveProvider.AddSamples(pcmBuffer, 0, bytesConverted);
+                    _bufferedWaveProvider.AddSamples(byteBuffer, 0, bytesToAdd);
                     chunkCount++;
 
                     if (chunkCount % 20 == 0) // Log every 20 chunks
@@ -744,29 +745,6 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         }
 
         await Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Converts float samples (-1.0 to 1.0) to 16-bit PCM (signed short)
-    /// </summary>
-    private int ConvertFloatToPcm16(float[] floatSamples, int sampleCount, byte[] pcmBuffer)
-    {
-        int byteIndex = 0;
-
-        for (int i = 0; i < sampleCount; i++)
-        {
-            // Clamp float sample to -1.0 to 1.0 range
-            float sample = Math.Clamp(floatSamples[i], -1.0f, 1.0f);
-
-            // Convert to 16-bit signed integer (-32768 to 32767)
-            short pcmSample = (short)(sample * 32767f);
-
-            // Write as little-endian bytes
-            pcmBuffer[byteIndex++] = (byte)(pcmSample & 0xFF);
-            pcmBuffer[byteIndex++] = (byte)((pcmSample >> 8) & 0xFF);
-        }
-
-        return byteIndex;
     }
 
     private async Task ProcessAacDataAsync(byte[] aacData, CancellationToken cancellationToken)
