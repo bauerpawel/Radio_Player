@@ -1148,7 +1148,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
                 // - type (4 bytes, enum)
                 // - is_last (4 bytes, FLAC__bool)
                 // - length (4 bytes, unsigned)
-                // - data union (starts at offset 12)
+                // - data union (starts at offset 16 due to alignment)
                 //
                 // FLAC__StreamMetadata_StreamInfo layout (inside data union):
                 // - min_blocksize (4 bytes)
@@ -1161,7 +1161,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
                 // - total_samples (8 bytes)
                 // - md5sum (16 bytes)
 
-                int offset = 12; // Skip type, is_last, length
+                int offset = 16; // Skip type, is_last, length (with alignment padding)
                 offset += 4; // Skip min_blocksize
                 offset += 4; // Skip max_blocksize
                 offset += 4; // Skip min_framesize
