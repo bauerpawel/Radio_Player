@@ -15,6 +15,11 @@ public partial class App : Application
 {
     private ServiceProvider? _serviceProvider;
 
+    /// <summary>
+    /// Gets the current ILanguageService instance for accessing translations
+    /// </summary>
+    public static ILanguageService? CurrentLanguageService { get; private set; }
+
     public App()
     {
         // Global exception handler
@@ -60,6 +65,7 @@ public partial class App : Application
             {
                 var languageService = _serviceProvider.GetRequiredService<ILanguageService>();
                 await languageService.InitializeAsync();
+                CurrentLanguageService = languageService;
             }
             catch (Exception ex)
             {

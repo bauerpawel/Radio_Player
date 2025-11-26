@@ -59,11 +59,11 @@ public partial class SettingsDialog : Window
             }
         }
 
-        MessageBox.Show(
-            "Settings saved successfully!\n\nNote: Some language changes may require application restart to take full effect.",
-            "Settings Saved",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        var message = _languageService?.GetString("Messages.SettingsSaved")
+            ?? "Settings saved successfully!\n\nNote: Some language changes may require application restart to take full effect.";
+        var title = _languageService?.GetString("Messages.Success") ?? "Settings Saved";
+
+        MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
 
         DialogResult = true;
         Close();

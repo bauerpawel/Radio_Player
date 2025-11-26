@@ -165,6 +165,7 @@
     "ConfirmClearHistory": "Are you sure you want to clear all playback history?",
     "Confirmation": "Confirmation",
     "HistoryCleared": "History has been cleared",
-    "Success": "Success"
+    "Success": "Success",
+    "SettingsSaved": "Settings saved successfully!\n\nNote: Some language changes may require application restart to take full effect."
   }
 }

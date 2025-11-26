@@ -165,6 +165,7 @@
     "ConfirmClearHistory": "Czy na pewno chcesz wyczyścić całą historię odtwarzania?",
     "Confirmation": "Potwierdzenie",
     "HistoryCleared": "Historia została wyczyszczona",
-    "Success": "Sukces"
+    "Success": "Sukces",
+    "SettingsSaved": "Ustawienia zapisane pomyślnie!\n\nUwaga: Niektóre zmiany języka mogą wymagać ponownego uruchomienia aplikacji, aby w pełni zadziałały."
   }
 }
