@@ -122,33 +122,13 @@ public class LanguageService : ILanguageService
                         return key; // Key not found, return key itself
                     }
                 }
-                else if (current is JsonElement element)
-                {
-                    if (element.TryGetProperty(k, out var prop))
-                    {
-                        current = prop;
-                    }
-                    else
-                    {
-                        return key;
-                    }
-                }
                 else
                 {
                     return key;
                 }
             }
 
-            // Convert to string
-            if (current is JsonElement jsonElement)
-            {
-                return jsonElement.GetString() ?? key;
-            }
-            else if (current is string str)
-            {
-                return str;
-            }
-
+            // Convert final value to string
             return current?.ToString() ?? key;
         }
         catch
@@ -188,15 +168,10 @@ public class LanguageService : ILanguageService
             }
 
             var json = File.ReadAllText(filePath);
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = false,
-                ReadCommentHandling = JsonCommentHandling.Skip,
-                AllowTrailingCommas = true
-            };
 
-            _translations = JsonSerializer.Deserialize<Dictionary<string, object>>(json, options)
-                ?? new Dictionary<string, object>();
+            // Parse as JsonDocument first to handle nested structures properly
+            using var document = JsonDocument.Parse(json);
+            _translations = ConvertJsonElement(document.RootElement);
 
             return true;
         }
@@ -204,6 +179,31 @@ public class LanguageService : ILanguageService
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// Convert JsonElement to Dictionary for proper nested object handling
+    /// </summary>
+    private Dictionary<string, object> ConvertJsonElement(JsonElement element)
+    {
+        var dictionary = new Dictionary<string, object>();
+
+        foreach (var property in element.EnumerateObject())
+        {
+            dictionary[property.Name] = property.Value.ValueKind switch
+            {
+                JsonValueKind.Object => ConvertJsonElement(property.Value),
+                JsonValueKind.Array => property.Value,
+                JsonValueKind.String => property.Value.GetString() ?? string.Empty,
+                JsonValueKind.Number => property.Value.GetDouble(),
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.Null => string.Empty,
+                _ => property.Value.ToString()
+            };
+        }
+
+        return dictionary;
     }
 
     protected virtual void OnPropertyChanged(string propertyName)

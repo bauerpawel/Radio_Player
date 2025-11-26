@@ -165,6 +165,7 @@
     "ConfirmClearHistory": "Sind Sie sicher, dass Sie den gesamten Wiedergabeverlauf löschen möchten?",
     "Confirmation": "Bestätigung",
     "HistoryCleared": "Verlauf wurde gelöscht",
-    "Success": "Erfolg"
+    "Success": "Erfolg",
+    "SettingsSaved": "Einstellungen erfolgreich gespeichert!\n\nHinweis: Einige Sprachänderungen erfordern möglicherweise einen Neustart der Anwendung, um vollständig wirksam zu werden."
   }
 }
