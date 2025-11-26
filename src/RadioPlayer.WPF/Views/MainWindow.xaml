@@ -4,8 +4,9 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:helpers="clr-namespace:RadioPlayer.WPF.Helpers"
         mc:Ignorable="d"
-        Title="Radio Player"
+        Title="{helpers:Translate MainWindow.Title}"
         Height="800"
         Width="1100"
         MinHeight="700"
@@ -33,7 +34,7 @@
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                         <materialDesign:PackIcon Kind="Radio" Width="32" Height="32" VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Radio Player" FontSize="20" FontWeight="Medium"/>
+                            <TextBlock Text="{helpers:Translate AppName}" FontSize="20" FontWeight="Medium"/>
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                 <materialDesign:PackIcon Kind="PlayCircle"
                                                         Width="16" Height="16"
@@ -46,7 +47,7 @@
                                     <Run Text="{Binding CurrentTrack, Mode=OneWay}"/>
                                 </TextBlock>
                             </StackPanel>
-                            <TextBlock Text="Select a station to start playing"
+                            <TextBlock Text="{helpers:Translate MainWindow.SelectStation}"
                                       FontSize="12"
                                       Opacity="0.7"
                                       TextTrimming="CharacterEllipsis"
@@ -57,20 +58,20 @@
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
                         <Button Style="{StaticResource MaterialDesignIconButton}"
                                 Command="{Binding ShowAboutCommand}"
-                                ToolTip="About - Version and repository info"
+                                ToolTip="{helpers:Translate Menu.About}"
                                 Margin="8,0">
                             <materialDesign:PackIcon Kind="InformationVariant"/>
                         </Button>
                         <Button Style="{StaticResource MaterialDesignIconButton}"
                                 Command="{Binding OpenSettingsCommand}"
-                                ToolTip="Settings - Configure buffer sizes"
+                                ToolTip="{helpers:Translate Menu.Settings}"
                                 Margin="8,0">
                             <materialDesign:PackIcon Kind="Settings"/>
                         </Button>
                         <Button Style="{StaticResource MaterialDesignIconButton}"
                                 Command="{Binding ShowStreamInfoCommand}"
                                 IsEnabled="{Binding SelectedStation, Converter={StaticResource NullToBooleanConverter}}"
-                                ToolTip="Stream Info - View stream details"
+                                ToolTip="{helpers:Translate Menu.StreamInfo}"
                                 Margin="8,0">
                             <materialDesign:PackIcon Kind="InformationOutline"/>
                         </Button>
@@ -88,7 +89,7 @@
                 <!-- Sidebar Navigation -->
                 <materialDesign:Card Grid.Column="0" Margin="0,0,16,0" materialDesign:ElevationAssist.Elevation="Dp2">
                     <StackPanel Margin="16">
-                        <TextBlock Text="Browse"
+                        <TextBlock Text="{helpers:Translate Browse.Title}"
                                   FontSize="14"
                                   FontWeight="Medium"
                                   Foreground="{DynamicResource PrimaryHueMidBrush}"
@@ -100,7 +101,7 @@
                                 HorizontalAlignment="Stretch">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="TrendingUp" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBlock Text="Top Stations" VerticalAlignment="Center"/>
+                                <TextBlock Text="{helpers:Translate Browse.TopStations}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
 
@@ -110,7 +111,7 @@
                                 HorizontalAlignment="Stretch">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="Star" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBlock Text="Favorites" VerticalAlignment="Center"/>
+                                <TextBlock Text="{helpers:Translate Browse.Favorites}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
 
@@ -120,36 +121,36 @@
                                 HorizontalAlignment="Stretch">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="History" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBlock Text="History" VerticalAlignment="Center"/>
+                                <TextBlock Text="{helpers:Translate Browse.History}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
 
                         <Separator Margin="0,16" />
 
-                        <TextBlock Text="Filters"
+                        <TextBlock Text="{helpers:Translate Browse.Filters}"
                                   FontSize="14"
                                   FontWeight="Medium"
                                   Foreground="{DynamicResource PrimaryHueMidBrush}"
                                   Margin="0,0,0,12"/>
 
-                        <ComboBox materialDesign:HintAssist.Hint="Country"
+                        <ComboBox materialDesign:HintAssist.Hint="{helpers:Translate Browse.Country}"
                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
                                  ItemsSource="{Binding AvailableCountries}"
                                  Text="{Binding CountryFilter, UpdateSourceTrigger=PropertyChanged}"
                                  IsEditable="True"
                                  Margin="0,0,0,12"/>
 
-                        <TextBox materialDesign:HintAssist.Hint="Language"
+                        <TextBox materialDesign:HintAssist.Hint="{helpers:Translate Browse.Language}"
                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                 Text="{Binding LanguageFilter, UpdateSourceTrigger=PropertyChanged}"
                                 Margin="0,0,0,12"/>
 
-                        <TextBox materialDesign:HintAssist.Hint="Genre"
+                        <TextBox materialDesign:HintAssist.Hint="{helpers:Translate Browse.Genre}"
                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                 Text="{Binding GenreFilter, UpdateSourceTrigger=PropertyChanged}"
                                 Margin="0,0,0,12"/>
 
-                        <ComboBox materialDesign:HintAssist.Hint="Codec"
+                        <ComboBox materialDesign:HintAssist.Hint="{helpers:Translate Browse.Codec}"
                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
                                  Text="{Binding CodecFilter, UpdateSourceTrigger=PropertyChanged}"
                                  IsEditable="True"
@@ -166,7 +167,7 @@
                                 HorizontalAlignment="Stretch">
                             <StackPanel Orientation="Horizontal">
                                 <materialDesign:PackIcon Kind="FilterOutline" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBlock Text="Apply Filters" VerticalAlignment="Center"/>
+                                <TextBlock Text="{helpers:Translate Browse.ApplyFilters}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
 
@@ -189,7 +190,7 @@
                             </Grid.ColumnDefinitions>
 
                             <TextBox Grid.Column="0"
-                                    materialDesign:HintAssist.Hint="Search stations by name, genre, or country..."
+                                    materialDesign:HintAssist.Hint="{helpers:Translate Search.Placeholder}"
                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                     VerticalAlignment="Center"
@@ -205,7 +206,7 @@
                                    VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal">
                                     <materialDesign:PackIcon Kind="Magnify" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Text="Search" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{helpers:Translate Search.Button}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                         </Grid>
@@ -218,7 +219,7 @@
                                  MouseDoubleClick="StationsList_MouseDoubleClick">
                             <ListView.View>
                                 <GridView>
-                                    <GridViewColumn Header="Station" Width="280">
+                                    <GridViewColumn Header="{helpers:Translate StationList.Headers.Station}" Width="280">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
@@ -248,7 +249,7 @@
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
 
-                                    <GridViewColumn Header="Country" Width="140">
+                                    <GridViewColumn Header="{helpers:Translate StationList.Headers.Country}" Width="140">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
@@ -263,9 +264,9 @@
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
 
-                                    <GridViewColumn Header="Genre" Width="160" DisplayMemberBinding="{Binding Tags}"/>
+                                    <GridViewColumn Header="{helpers:Translate StationList.Headers.Genre}" Width="160" DisplayMemberBinding="{Binding Tags}"/>
 
-                                    <GridViewColumn Header="Quality" Width="120">
+                                    <GridViewColumn Header="{helpers:Translate StationList.Headers.Quality}" Width="120">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
@@ -284,7 +285,7 @@
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
 
-                                    <GridViewColumn Header="Actions" Width="90">
+                                    <GridViewColumn Header="{helpers:Translate StationList.Headers.Actions}" Width="90">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <Button Style="{StaticResource MaterialDesignOutlinedButton}"
@@ -292,13 +293,13 @@
                                                        CommandParameter="{Binding}"
                                                        Height="28"
                                                        Padding="8,4"
-                                                       ToolTip="View station details">
+                                                       ToolTip="{helpers:Translate StationList.ViewDetails}">
                                                     <StackPanel Orientation="Horizontal">
                                                         <materialDesign:PackIcon Kind="InformationOutline"
                                                                                 Width="16" Height="16"
                                                                                 VerticalAlignment="Center"
                                                                                 Margin="0,0,4,0"/>
-                                                        <TextBlock Text="Details" VerticalAlignment="Center" FontSize="11"/>
+                                                        <TextBlock Text="{helpers:Translate StationList.Details}" VerticalAlignment="Center" FontSize="11"/>
                                                     </StackPanel>
                                                 </Button>
                                             </DataTemplate>
@@ -327,7 +328,7 @@
                                 IsEnabled="{Binding SelectedStation, Converter={StaticResource NullToBooleanConverter}}"
                                 Width="56" Height="56"
                                 Margin="0,0,16,0"
-                                ToolTip="Play selected station">
+                                ToolTip="{helpers:Translate PlayerControls.Play}">
                             <materialDesign:PackIcon Kind="Play" Width="32" Height="32"/>
                         </Button>
 
@@ -336,7 +337,7 @@
                                 IsEnabled="{Binding CanStop}"
                                 Width="40" Height="40"
                                 Margin="0,0,12,0"
-                                ToolTip="Stop playback">
+                                ToolTip="{helpers:Translate PlayerControls.Stop}">
                             <materialDesign:PackIcon Kind="Stop" Width="24" Height="24"/>
                         </Button>
 
@@ -344,7 +345,7 @@
                                      Command="{Binding ToggleFavoriteCommand}"
                                      IsEnabled="{Binding SelectedStation, Converter={StaticResource NullToBooleanConverter}}"
                                      Width="40" Height="40"
-                                     ToolTip="Add to favorites">
+                                     ToolTip="{helpers:Translate PlayerControls.AddToFavorites}">
                             <ToggleButton.Content>
                                 <materialDesign:PackIcon Kind="StarOutline" Width="24" Height="24"/>
                             </ToggleButton.Content>
@@ -413,7 +414,7 @@
                                         </EventTrigger>
                                     </materialDesign:PackIcon.Triggers>
                                 </materialDesign:PackIcon>
-                                <TextBlock Text="Buffering..."
+                                <TextBlock Text="{helpers:Translate MainWindow.Buffering}"
                                           FontSize="11"
                                           Foreground="{DynamicResource SecondaryHueMidBrush}"
                                           FontWeight="SemiBold"/>
@@ -423,7 +424,7 @@
 
                     <!-- Default Status (when nothing is playing) -->
                     <TextBlock Grid.Column="1"
-                              Text="{Binding StatusMessage, FallbackValue='Ready'}"
+                              Text="{Binding StatusMessage, FallbackValue={helpers:Translate MainWindow.Ready}}"
                               FontSize="14"
                               FontWeight="Medium"
                               HorizontalAlignment="Center"
