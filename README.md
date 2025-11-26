@@ -40,6 +40,7 @@ A modern desktop radio player built with .NET 10 and WPF, providing access to 51
 - ✅ **Now Playing display** - shows current track with station logo
 
 ### Additional Features
+- ✅ **Multi-language support** - Polish, English, and German interface (easily extensible)
 - ✅ **System tray integration** - minimize to tray (optional in settings)
 - ✅ **Debug logging** - optional logging for troubleshooting buffering issues
 - ✅ **Configurable buffers** - adjust buffer sizes in settings
@@ -371,10 +372,13 @@ EnableLogging = false                 // Debug logging (configurable)
 ### Settings
 
 1. Click the **Settings** icon (⚙️) in top-right
-2. Adjust **Buffer Duration** (3-30s) for smoother playback
-3. Adjust **Pre-Buffer Duration** (1-10s) for faster start
-4. Enable **Debug Logging** to troubleshoot buffering issues
-5. Enable **Minimize to Tray** to minimize to system tray instead of taskbar
+2. **Language**: Choose interface language (Polish, English, German)
+3. Adjust **Buffer Duration** (3-30s) for smoother playback
+4. Adjust **Pre-Buffer Duration** (1-10s) for faster start
+5. Enable **Debug Logging** to troubleshoot buffering issues
+6. Enable **Minimize to Tray** to minimize to system tray instead of taskbar
+
+**Note**: Language changes are saved immediately and may require application restart for full effect.
 
 ### System Tray
 
@@ -419,6 +423,95 @@ dotnet run --project src/RadioPlayer.WPF
 - **NuGet Packages**: 10 packages
 - **Architecture**: Clean MVVM with DI
 - **Version**: 1.0
+
+### Adding New Language Support
+
+Radio Player supports multiple interface languages. Currently included: **Polish (default)**, **English**, and **German**.
+
+#### How to Add a New Language
+
+1. **Create translation file**:
+   - Navigate to `src/RadioPlayer.WPF/lang/` directory
+   - Copy an existing language file (e.g., `en.json`)
+   - Rename it to your language code (e.g., `fr.json` for French, `es.json` for Spanish)
+
+2. **Translate all strings**:
+   - Open the JSON file in a text editor
+   - Translate all values while keeping the keys unchanged
+   - Maintain the JSON structure (nested objects, proper formatting)
+
+   Example structure:
+   ```json
+   {
+     "AppName": "Radio Player",
+     "MainWindow": {
+       "Title": "Radio Player",
+       "SelectStation": "Select a station to start playing"
+     },
+     "Browse": {
+       "Title": "Browse",
+       "TopStations": "Top Stations"
+     }
+   }
+   ```
+
+3. **Register the language**:
+   - Open `src/RadioPlayer.WPF/Services/LanguageService.cs`
+   - Add your language code to the `AvailableLanguages` array:
+     ```csharp
+     public string[] AvailableLanguages { get; } = new[] { "pl", "en", "de", "fr" };
+     ```
+
+4. **Update Settings Dialog**:
+   - Open `src/RadioPlayer.WPF/Views/SettingsDialog.xaml`
+   - Add a new ComboBoxItem for your language:
+     ```xml
+     <ComboBoxItem Content="Français (French)" Tag="fr"/>
+     ```
+
+5. **Build and test**:
+   ```bash
+   dotnet build
+   dotnet run --project src/RadioPlayer.WPF
+   ```
+
+6. **Test the language**:
+   - Run the application
+   - Go to Settings (⚙️ icon)
+   - Select your new language from the dropdown
+   - Click Save
+   - Restart the application to see all changes
+
+#### Translation File Location
+
+All translation files are located in:
+```
+src/RadioPlayer.WPF/lang/
+├── pl.json  (Polish - default)
+├── en.json  (English)
+├── de.json  (German)
+└── [your-language].json
+```
+
+#### Tips for Translators
+
+- **Keep key names**: Never change JSON keys, only translate values
+- **Preserve placeholders**: Keep format placeholders like `{0}`, `{1}` in messages
+- **Test thoroughly**: Check all dialogs and messages after translation
+- **Match tone**: Keep translations consistent with the application's friendly tone
+- **Ask for help**: If unsure about context, check other language files or ask maintainers
+
+#### Contributing Translations
+
+We welcome translations! To contribute:
+1. Fork the repository
+2. Create translation file following steps above
+3. Test your translation
+4. Submit a Pull Request with:
+   - Translation file (`lang/[code].json`)
+   - Updated `LanguageService.cs`
+   - Updated `SettingsDialog.xaml`
+   - Screenshot showing the language working
 
 ## 🔒 Security & Privacy
 

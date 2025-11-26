@@ -105,6 +105,12 @@ public class RadioStationRepository : IRadioStationRepository
             CREATE INDEX IF NOT EXISTS idx_history_station ON ListeningHistory(StationId);
             CREATE INDEX IF NOT EXISTS idx_history_date ON ListeningHistory(DateRecorded);
             CREATE INDEX IF NOT EXISTS idx_history_start ON ListeningHistory(StartTime);
+
+            CREATE TABLE IF NOT EXISTS Settings (
+                Key TEXT PRIMARY KEY NOT NULL,
+                Value TEXT NOT NULL,
+                DateModified TEXT DEFAULT CURRENT_TIMESTAMP
+            );
         ";
 
         using var command = connection.CreateCommand();
@@ -571,6 +577,49 @@ public class RadioStationRepository : IRadioStationRepository
 
             using var command = connection.CreateCommand();
             command.CommandText = "VACUUM";
+            command.ExecuteNonQuery();
+        });
+    }
+
+    #endregion
+
+    #region Settings Management
+
+    public async Task<string?> GetSettingAsync(string key)
+    {
+        return await Task.Run(() =>
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT Value FROM Settings WHERE Key = @Key";
+            command.Parameters.AddWithValue("@Key", key);
+
+            var result = command.ExecuteScalar();
+            return result?.ToString();
+        });
+    }
+
+    public async Task SetSettingAsync(string key, string value)
+    {
+        await Task.Run(() =>
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+                INSERT INTO Settings (Key, Value, DateModified)
+                VALUES (@Key, @Value, @DateModified)
+                ON CONFLICT(Key) DO UPDATE SET
+                    Value = @Value,
+                    DateModified = @DateModified";
+
+            command.Parameters.AddWithValue("@Key", key);
+            command.Parameters.AddWithValue("@Value", value);
+            command.Parameters.AddWithValue("@DateModified", DateTime.UtcNow.ToString("o"));
+
             command.ExecuteNonQuery();
         });
     }

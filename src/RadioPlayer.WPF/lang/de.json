@@ -1,0 +1,170 @@
+{
+  "AppName": "Radio Player",
+  "Version": "Version 1.0",
+
+  "MainWindow": {
+    "Title": "Radio Player",
+    "SelectStation": "Wählen Sie einen Sender aus, um die Wiedergabe zu starten",
+    "Buffering": "Pufferung...",
+    "Ready": "Bereit"
+  },
+
+  "Menu": {
+    "About": "Über - Version und Repository-Informationen",
+    "Settings": "Einstellungen - Puffergrößen konfigurieren",
+    "StreamInfo": "Stream-Info - Stream-Details anzeigen"
+  },
+
+  "Browse": {
+    "Title": "Durchsuchen",
+    "TopStations": "Top-Sender",
+    "Favorites": "Favoriten",
+    "History": "Verlauf",
+    "Filters": "Filter",
+    "Country": "Land",
+    "Language": "Sprache",
+    "Genre": "Genre",
+    "Codec": "Codec",
+    "ApplyFilters": "Filter anwenden"
+  },
+
+  "Search": {
+    "Placeholder": "Sender nach Name, Genre oder Land suchen...",
+    "Button": "Suchen"
+  },
+
+  "StationList": {
+    "Headers": {
+      "Station": "Sender",
+      "Country": "Land",
+      "Genre": "Genre",
+      "Quality": "Qualität",
+      "Actions": "Aktionen"
+    },
+    "Details": "Details",
+    "ViewDetails": "Sender-Details anzeigen"
+  },
+
+  "PlayerControls": {
+    "Play": "Ausgewählten Sender abspielen",
+    "Stop": "Wiedergabe stoppen",
+    "AddToFavorites": "Zu Favoriten hinzufügen"
+  },
+
+  "Settings": {
+    "Title": "Einstellungen",
+    "DebugLogging": "Debug-Protokollierung",
+    "EnableDebugLogging": "Debug-Protokollierung in Datei aktivieren",
+    "DebugLoggingDescription": "Protokolliert Puffer- und Wiedergabedetails zur Diagnose von Problemen. Datei wird im Anwendungsverzeichnis gespeichert.",
+    "WindowBehavior": "Fensterverhalten",
+    "MinimizeToTray": "In Systemleiste statt Taskleiste minimieren",
+    "MinimizeToTrayDescription": "Wenn aktiviert, wird das Fenster beim Minimieren in die Systemleiste statt in die Taskleiste verschoben.",
+    "Language": "Anwendungssprache",
+    "LanguageDescription": "Wählen Sie die Oberflächensprache. Änderung erfordert Neustart der Anwendung.",
+    "ResetToDefault": "Auf Standard zurücksetzen",
+    "Save": "Speichern",
+    "Cancel": "Abbrechen",
+    "Languages": {
+      "Polish": "Polnisch",
+      "English": "Englisch",
+      "German": "Deutsch"
+    }
+  },
+
+  "About": {
+    "Title": "Über Radio Player",
+    "About": "Über",
+    "Description": "Radio Player ist eine moderne, quelloffene Desktop-Anwendung zum Streamen von Internetradiosendern. Entwickelt mit modernsten .NET 10- und WPF-Technologien, bietet sie nahtlosen Zugriff auf über 51.000 Radiosender aus der ganzen Welt.\n\nMit einer schönen Material Design-Oberfläche, intelligentem Puffern und Multi-Format-Audio-Unterstützung (MP3, AAC, OGG Vorbis) bietet Radio Player ein erstklassiges Hörerlebnis mit Funktionen wie Favoritenverwaltung, Wiedergabeverlauf und Systemleistenintegration.",
+    "KeyFeatures": "Hauptfunktionen",
+    "Features": {
+      "Access": "Zugriff auf über 51.000 Internetradiosender weltweit",
+      "Search": "Erweiterte Suche nach Name, Land, Sprache und Genre",
+      "Streaming": "Multi-Format-Streaming: MP3, AAC, OGG Vorbis",
+      "Favorites": "Speichern und organisieren Sie Ihre Lieblingssender",
+      "History": "Hörverlauf mit Dauernstatistiken verfolgen",
+      "SystemTray": "In Systemleiste minimieren für Hintergrundwiedergabe",
+      "Buffering": "Konfigurierbares Puffern für optimale Leistung",
+      "Design": "Schöne Material Design-Oberfläche"
+    },
+    "Technology": "Technologie",
+    "TechnologyDescription": "Entwickelt mit .NET 10 und WPF für Windows-Desktop. Angetrieben von NAudio für hochwertiges Audio-Streaming, MaterialDesignThemes für beeindruckende Benutzeroberfläche und der Radio Browser API für Zugriff auf Tausende von Sendern.",
+    "OpenSource": "Open Source",
+    "OpenSourceDescription": "Dieses Projekt ist quelloffen und unter der Apache-2.0-Lizenz lizenziert. Beiträge, Fehlerberichte und Feature-Anfragen sind auf GitHub willkommen:",
+    "Close": "Schließen"
+  },
+
+  "History": {
+    "Title": "Wiedergabeverlauf",
+    "SearchPlaceholder": "Nach Sendername suchen...",
+    "Refresh": "Aktualisieren",
+    "ClearAll": "Alles löschen",
+    "RefreshHistory": "Verlauf aktualisieren",
+    "ClearAllHistory": "Gesamten Verlauf löschen",
+    "Loading": "Verlauf wird geladen...",
+    "NoHistory": "Noch kein Wiedergabeverlauf",
+    "StartPlaying": "Beginnen Sie Sender abzuspielen, um Ihren Verlauf aufzubauen",
+    "Headers": {
+      "Station": "Sender",
+      "DateTime": "Datum & Uhrzeit",
+      "Duration": "Dauer",
+      "Genre": "Genre",
+      "Actions": "Aktionen"
+    },
+    "PlayAgain": "Erneut abspielen",
+    "PlayAgainTooltip": "Diesen Sender erneut abspielen",
+    "TotalRecords": "Gesamtanzahl der Datensätze: {0}",
+    "Close": "Schließen"
+  },
+
+  "StationDetails": {
+    "Title": "Sender-Details",
+    "BasicInfo": "Grundinformationen",
+    "Name": "Name",
+    "Country": "Land",
+    "Language": "Sprache",
+    "Tags": "Tags",
+    "StreamInfo": "Stream-Informationen",
+    "Codec": "Codec",
+    "Bitrate": "Bitrate",
+    "StreamUrl": "Stream-URL",
+    "Homepage": "Homepage",
+    "AdditionalInfo": "Zusätzliche Informationen",
+    "Votes": "Stimmen",
+    "ClickCount": "Klickanzahl",
+    "Close": "Schließen",
+    "OpenHomepage": "Homepage öffnen"
+  },
+
+  "StreamInfo": {
+    "Title": "Stream-Informationen",
+    "CurrentStream": "Aktueller Stream",
+    "NoStreamPlaying": "Kein Stream wird abgespielt",
+    "SelectStation": "Wählen und spielen Sie einen Sender, um Stream-Informationen anzuzeigen",
+    "StationName": "Sendername",
+    "Format": "Format",
+    "Quality": "Qualität",
+    "StreamUrl": "Stream-URL",
+    "IcyMetadata": "ICY-Metadaten",
+    "IcyName": "ICY-Name",
+    "IcyGenre": "ICY-Genre",
+    "IcyDescription": "ICY-Beschreibung",
+    "IcyUrl": "ICY-URL",
+    "CurrentTrack": "Aktueller Titel",
+    "Close": "Schließen"
+  },
+
+  "Messages": {
+    "PlaybackError": "Wiedergabefehler",
+    "FailedToPlay": "Sender konnte nicht abgespielt werden: {0}",
+    "DatabaseError": "Datenbankfehler",
+    "FailedToInitializeDatabase": "Datenbank konnte nicht initialisiert werden: {0}\n\nDie Anwendung wird fortgesetzt, aber Favoriten und Verlauf funktionieren möglicherweise nicht.",
+    "StartupError": "Startfehler",
+    "FailedToStart": "Anwendung konnte nicht gestartet werden:\n\n{0}\n\nStack-Trace:\n{1}",
+    "CriticalError": "Kritischer Fehler",
+    "UnhandledException": "Nicht behandelte Ausnahme:\n\n{0}\n\nStack-Trace:\n{1}",
+    "ConfirmClearHistory": "Sind Sie sicher, dass Sie den gesamten Wiedergabeverlauf löschen möchten?",
+    "Confirmation": "Bestätigung",
+    "HistoryCleared": "Verlauf wurde gelöscht",
+    "Success": "Erfolg"
+  }
+}

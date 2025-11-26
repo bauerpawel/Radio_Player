@@ -1,0 +1,170 @@
+{
+  "AppName": "Radio Player",
+  "Version": "Version 1.0",
+
+  "MainWindow": {
+    "Title": "Radio Player",
+    "SelectStation": "Select a station to start playing",
+    "Buffering": "Buffering...",
+    "Ready": "Ready"
+  },
+
+  "Menu": {
+    "About": "About - Version and repository info",
+    "Settings": "Settings - Configure buffer sizes",
+    "StreamInfo": "Stream Info - View stream details"
+  },
+
+  "Browse": {
+    "Title": "Browse",
+    "TopStations": "Top Stations",
+    "Favorites": "Favorites",
+    "History": "History",
+    "Filters": "Filters",
+    "Country": "Country",
+    "Language": "Language",
+    "Genre": "Genre",
+    "Codec": "Codec",
+    "ApplyFilters": "Apply Filters"
+  },
+
+  "Search": {
+    "Placeholder": "Search stations by name, genre, or country...",
+    "Button": "Search"
+  },
+
+  "StationList": {
+    "Headers": {
+      "Station": "Station",
+      "Country": "Country",
+      "Genre": "Genre",
+      "Quality": "Quality",
+      "Actions": "Actions"
+    },
+    "Details": "Details",
+    "ViewDetails": "View station details"
+  },
+
+  "PlayerControls": {
+    "Play": "Play selected station",
+    "Stop": "Stop playback",
+    "AddToFavorites": "Add to favorites"
+  },
+
+  "Settings": {
+    "Title": "Settings",
+    "DebugLogging": "Debug Logging",
+    "EnableDebugLogging": "Enable debug logging to file",
+    "DebugLoggingDescription": "Logs buffering and playback details to help diagnose issues. File saved to application directory.",
+    "WindowBehavior": "Window Behavior",
+    "MinimizeToTray": "Minimize to system tray instead of taskbar",
+    "MinimizeToTrayDescription": "When enabled, minimizing the window will send it to the system tray instead of the taskbar.",
+    "Language": "Application Language",
+    "LanguageDescription": "Select the interface language. Change requires application restart.",
+    "ResetToDefault": "Reset to Default",
+    "Save": "Save",
+    "Cancel": "Cancel",
+    "Languages": {
+      "Polish": "Polish",
+      "English": "English",
+      "German": "German"
+    }
+  },
+
+  "About": {
+    "Title": "About Radio Player",
+    "About": "About",
+    "Description": "Radio Player is a modern, open-source desktop application for streaming internet radio stations. Built with cutting-edge .NET 10 and WPF technologies, it provides seamless access to over 51,000 radio stations from around the world.\n\nFeaturing a beautiful Material Design interface, intelligent buffering, and multi-format audio support (MP3, AAC, OGG Vorbis), Radio Player delivers a premium listening experience with features like favorites management, playback history tracking, and system tray integration.",
+    "KeyFeatures": "Key Features",
+    "Features": {
+      "Access": "Access to 51,000+ internet radio stations worldwide",
+      "Search": "Advanced search by name, country, language, and genre",
+      "Streaming": "Multi-format streaming: MP3, AAC, OGG Vorbis",
+      "Favorites": "Save and organize your favorite stations",
+      "History": "Track listening history with duration statistics",
+      "SystemTray": "Minimize to system tray for background playback",
+      "Buffering": "Configurable buffering for optimal performance",
+      "Design": "Beautiful Material Design interface"
+    },
+    "Technology": "Technology",
+    "TechnologyDescription": "Built with .NET 10 and WPF for Windows desktop. Powered by NAudio for high-quality audio streaming, MaterialDesignThemes for stunning UI, and the Radio Browser API for access to thousands of stations.",
+    "OpenSource": "Open Source",
+    "OpenSourceDescription": "This project is open source and licensed under the Apache-2.0 License. Contributions, bug reports, and feature requests are welcome on GitHub:",
+    "Close": "Close"
+  },
+
+  "History": {
+    "Title": "Playback History",
+    "SearchPlaceholder": "Search by station name...",
+    "Refresh": "Refresh",
+    "ClearAll": "Clear All",
+    "RefreshHistory": "Refresh history",
+    "ClearAllHistory": "Clear all history",
+    "Loading": "Loading history...",
+    "NoHistory": "No playback history yet",
+    "StartPlaying": "Start playing stations to build your history",
+    "Headers": {
+      "Station": "Station",
+      "DateTime": "Date & Time",
+      "Duration": "Duration",
+      "Genre": "Genre",
+      "Actions": "Actions"
+    },
+    "PlayAgain": "Play Again",
+    "PlayAgainTooltip": "Play this station again",
+    "TotalRecords": "Total records: {0}",
+    "Close": "Close"
+  },
+
+  "StationDetails": {
+    "Title": "Station Details",
+    "BasicInfo": "Basic Information",
+    "Name": "Name",
+    "Country": "Country",
+    "Language": "Language",
+    "Tags": "Tags",
+    "StreamInfo": "Stream Information",
+    "Codec": "Codec",
+    "Bitrate": "Bitrate",
+    "StreamUrl": "Stream URL",
+    "Homepage": "Homepage",
+    "AdditionalInfo": "Additional Information",
+    "Votes": "Votes",
+    "ClickCount": "Click Count",
+    "Close": "Close",
+    "OpenHomepage": "Open Homepage"
+  },
+
+  "StreamInfo": {
+    "Title": "Stream Information",
+    "CurrentStream": "Current Stream",
+    "NoStreamPlaying": "No stream playing",
+    "SelectStation": "Select and play a station to view stream information",
+    "StationName": "Station Name",
+    "Format": "Format",
+    "Quality": "Quality",
+    "StreamUrl": "Stream URL",
+    "IcyMetadata": "ICY Metadata",
+    "IcyName": "ICY Name",
+    "IcyGenre": "ICY Genre",
+    "IcyDescription": "ICY Description",
+    "IcyUrl": "ICY URL",
+    "CurrentTrack": "Current Track",
+    "Close": "Close"
+  },
+
+  "Messages": {
+    "PlaybackError": "Playback Error",
+    "FailedToPlay": "Failed to play station: {0}",
+    "DatabaseError": "Database Error",
+    "FailedToInitializeDatabase": "Failed to initialize database: {0}\n\nThe application will continue, but favorites and history may not work.",
+    "StartupError": "Startup Error",
+    "FailedToStart": "Failed to start application:\n\n{0}\n\nStack trace:\n{1}",
+    "CriticalError": "Critical Error",
+    "UnhandledException": "Unhandled exception:\n\n{0}\n\nStack trace:\n{1}",
+    "ConfirmClearHistory": "Are you sure you want to clear all playback history?",
+    "Confirmation": "Confirmation",
+    "HistoryCleared": "History has been cleared",
+    "Success": "Success"
+  }
+}
