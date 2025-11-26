@@ -55,6 +55,21 @@ public partial class App : Application
                     MessageBoxImage.Warning);
             }
 
+            // Initialize language service
+            try
+            {
+                var languageService = _serviceProvider.GetRequiredService<ILanguageService>();
+                await languageService.InitializeAsync();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Failed to initialize language service: {ex.Message}\n\nThe application will use default language.",
+                    "Language Service Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+
             // Create and show main window
             var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
@@ -79,6 +94,7 @@ public partial class App : Application
         services.AddSingleton<IRadioBrowserService, RadioBrowserService>();
         services.AddSingleton<IRadioStationRepository, RadioStationRepository>();
         services.AddSingleton<IRadioPlayer, NAudioRadioPlayer>();
+        services.AddSingleton<ILanguageService, LanguageService>();
 
         // Register ViewModels
         services.AddTransient<MainViewModel>();

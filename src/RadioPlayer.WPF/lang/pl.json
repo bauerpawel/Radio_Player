@@ -1,0 +1,170 @@
+{
+  "AppName": "Radio Player",
+  "Version": "Wersja 1.0",
+
+  "MainWindow": {
+    "Title": "Radio Player",
+    "SelectStation": "Wybierz stację, aby rozpocząć odtwarzanie",
+    "Buffering": "Buforowanie...",
+    "Ready": "Gotowy"
+  },
+
+  "Menu": {
+    "About": "O programie - Wersja i repozytorium",
+    "Settings": "Ustawienia - Konfiguracja bufora",
+    "StreamInfo": "Informacje o strumieniu - Zobacz szczegóły strumienia"
+  },
+
+  "Browse": {
+    "Title": "Przeglądaj",
+    "TopStations": "Najlepsze stacje",
+    "Favorites": "Ulubione",
+    "History": "Historia",
+    "Filters": "Filtry",
+    "Country": "Kraj",
+    "Language": "Język",
+    "Genre": "Gatunek",
+    "Codec": "Kodek",
+    "ApplyFilters": "Zastosuj filtry"
+  },
+
+  "Search": {
+    "Placeholder": "Szukaj stacji po nazwie, gatunku lub kraju...",
+    "Button": "Szukaj"
+  },
+
+  "StationList": {
+    "Headers": {
+      "Station": "Stacja",
+      "Country": "Kraj",
+      "Genre": "Gatunek",
+      "Quality": "Jakość",
+      "Actions": "Akcje"
+    },
+    "Details": "Szczegóły",
+    "ViewDetails": "Zobacz szczegóły stacji"
+  },
+
+  "PlayerControls": {
+    "Play": "Odtwórz wybraną stację",
+    "Stop": "Zatrzymaj odtwarzanie",
+    "AddToFavorites": "Dodaj do ulubionych"
+  },
+
+  "Settings": {
+    "Title": "Ustawienia",
+    "DebugLogging": "Logowanie debugowania",
+    "EnableDebugLogging": "Włącz logowanie debugowania do pliku",
+    "DebugLoggingDescription": "Rejestruje szczegóły buforowania i odtwarzania, aby pomóc w diagnostyce problemów. Plik zapisany w katalogu aplikacji.",
+    "WindowBehavior": "Zachowanie okna",
+    "MinimizeToTray": "Minimalizuj do zasobnika systemowego zamiast paska zadań",
+    "MinimizeToTrayDescription": "Gdy włączone, minimalizowanie okna wyśle je do zasobnika systemowego zamiast paska zadań.",
+    "Language": "Język aplikacji",
+    "LanguageDescription": "Wybierz język interfejsu aplikacji. Zmiana wymaga ponownego uruchomienia aplikacji.",
+    "ResetToDefault": "Resetuj do domyślnych",
+    "Save": "Zapisz",
+    "Cancel": "Anuluj",
+    "Languages": {
+      "Polish": "Polski",
+      "English": "Angielski",
+      "German": "Niemiecki"
+    }
+  },
+
+  "About": {
+    "Title": "O programie Radio Player",
+    "About": "O programie",
+    "Description": "Radio Player to nowoczesna, otwarta aplikacja desktopowa do strumieniowania stacji radiowych internetowych. Zbudowana przy użyciu najnowocześniejszych technologii .NET 10 i WPF, zapewnia bezproblemowy dostęp do ponad 51 000 stacji radiowych z całego świata.\n\nWyposażony w piękny interfejs Material Design, inteligentne buforowanie i obsługę wielu formatów audio (MP3, AAC, OGG Vorbis), Radio Player zapewnia doskonałe wrażenia z słuchania z funkcjami takimi jak zarządzanie ulubionymi, śledzenie historii odtwarzania i integracja z zasobnikiem systemowym.",
+    "KeyFeatures": "Kluczowe funkcje",
+    "Features": {
+      "Access": "Dostęp do 51 000+ internetowych stacji radiowych na całym świecie",
+      "Search": "Zaawansowane wyszukiwanie po nazwie, kraju, języku i gatunku",
+      "Streaming": "Strumieniowanie wielu formatów: MP3, AAC, OGG Vorbis",
+      "Favorites": "Zapisuj i organizuj swoje ulubione stacje",
+      "History": "Śledź historię słuchania ze statystykami czasu trwania",
+      "SystemTray": "Minimalizuj do zasobnika systemowego dla odtwarzania w tle",
+      "Buffering": "Konfigurowalne buforowanie dla optymalnej wydajności",
+      "Design": "Piękny interfejs Material Design"
+    },
+    "Technology": "Technologia",
+    "TechnologyDescription": "Zbudowany z .NET 10 i WPF dla pulpitu Windows. Zasilany przez NAudio dla wysokiej jakości strumieniowania audio, MaterialDesignThemes dla oszałamiającego interfejsu użytkownika i Radio Browser API dla dostępu do tysięcy stacji.",
+    "OpenSource": "Otwarte źródło",
+    "OpenSourceDescription": "Ten projekt jest otwartoźródłowy i licencjonowany na licencji Apache-2.0. Wkłady, zgłoszenia błędów i prośby o funkcje są mile widziane na GitHub:",
+    "Close": "Zamknij"
+  },
+
+  "History": {
+    "Title": "Historia odtwarzania",
+    "SearchPlaceholder": "Wyszukaj według nazwy stacji...",
+    "Refresh": "Odśwież",
+    "ClearAll": "Wyczyść wszystko",
+    "RefreshHistory": "Odśwież historię",
+    "ClearAllHistory": "Wyczyść całą historię",
+    "Loading": "Ładowanie historii...",
+    "NoHistory": "Brak historii odtwarzania",
+    "StartPlaying": "Zacznij odtwarzać stacje, aby zbudować swoją historię",
+    "Headers": {
+      "Station": "Stacja",
+      "DateTime": "Data i godzina",
+      "Duration": "Czas trwania",
+      "Genre": "Gatunek",
+      "Actions": "Akcje"
+    },
+    "PlayAgain": "Odtwórz ponownie",
+    "PlayAgainTooltip": "Odtwórz tę stację ponownie",
+    "TotalRecords": "Łącznie rekordów: {0}",
+    "Close": "Zamknij"
+  },
+
+  "StationDetails": {
+    "Title": "Szczegóły stacji",
+    "BasicInfo": "Podstawowe informacje",
+    "Name": "Nazwa",
+    "Country": "Kraj",
+    "Language": "Język",
+    "Tags": "Tagi",
+    "StreamInfo": "Informacje o strumieniu",
+    "Codec": "Kodek",
+    "Bitrate": "Bitrate",
+    "StreamUrl": "URL strumienia",
+    "Homepage": "Strona główna",
+    "AdditionalInfo": "Dodatkowe informacje",
+    "Votes": "Głosy",
+    "ClickCount": "Liczba kliknięć",
+    "Close": "Zamknij",
+    "OpenHomepage": "Otwórz stronę główną"
+  },
+
+  "StreamInfo": {
+    "Title": "Informacje o strumieniu",
+    "CurrentStream": "Bieżący strumień",
+    "NoStreamPlaying": "Brak odtwarzanego strumienia",
+    "SelectStation": "Wybierz i odtwórz stację, aby zobaczyć informacje o strumieniu",
+    "StationName": "Nazwa stacji",
+    "Format": "Format",
+    "Quality": "Jakość",
+    "StreamUrl": "URL strumienia",
+    "IcyMetadata": "Metadane ICY",
+    "IcyName": "Nazwa ICY",
+    "IcyGenre": "Gatunek ICY",
+    "IcyDescription": "Opis ICY",
+    "IcyUrl": "URL ICY",
+    "CurrentTrack": "Bieżący utwór",
+    "Close": "Zamknij"
+  },
+
+  "Messages": {
+    "PlaybackError": "Błąd odtwarzania",
+    "FailedToPlay": "Nie udało się odtworzyć stacji: {0}",
+    "DatabaseError": "Błąd bazy danych",
+    "FailedToInitializeDatabase": "Nie udało się zainicjować bazy danych: {0}\n\nAplikacja będzie kontynuować, ale ulubione i historia mogą nie działać.",
+    "StartupError": "Błąd uruchamiania",
+    "FailedToStart": "Nie udało się uruchomić aplikacji:\n\n{0}\n\nŚlad stosu:\n{1}",
+    "CriticalError": "Błąd krytyczny",
+    "UnhandledException": "Nieobsłużony wyjątek:\n\n{0}\n\nŚlad stosu:\n{1}",
+    "ConfirmClearHistory": "Czy na pewno chcesz wyczyścić całą historię odtwarzania?",
+    "Confirmation": "Potwierdzenie",
+    "HistoryCleared": "Historia została wyczyszczona",
+    "Success": "Sukces"
+  }
+}

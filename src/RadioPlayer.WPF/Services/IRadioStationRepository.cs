@@ -37,4 +37,8 @@ public interface IRadioStationRepository
     Task InitializeDatabaseAsync();
     Task<long> GetDatabaseSizeAsync();
     Task VacuumDatabaseAsync();
+
+    // Settings management
+    Task<string?> GetSettingAsync(string key);
+    Task SetSettingAsync(string key, string value);
 }

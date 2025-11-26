@@ -19,6 +19,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IRadioBrowserService? _radioBrowserService;
     private readonly IRadioStationRepository? _repository;
     private readonly IRadioPlayer? _radioPlayer;
+    private readonly ILanguageService? _languageService;
 
     [ObservableProperty]
     private ObservableCollection<RadioStation> _stations = new();
@@ -83,11 +84,13 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel(
         IRadioBrowserService radioBrowserService,
         IRadioStationRepository repository,
-        IRadioPlayer radioPlayer)
+        IRadioPlayer radioPlayer,
+        ILanguageService languageService)
     {
         _radioBrowserService = radioBrowserService;
         _repository = repository;
         _radioPlayer = radioPlayer;
+        _languageService = languageService;
 
         // Subscribe to player events
         if (_radioPlayer != null)
@@ -98,8 +101,28 @@ public partial class MainViewModel : ObservableObject
             _radioPlayer.ErrorOccurred += OnErrorOccurred;
         }
 
+        // Subscribe to language change events
+        if (_languageService != null)
+        {
+            _languageService.LanguageChanged += OnLanguageChanged;
+        }
+
         // Load available countries for the filter
         _ = LoadAvailableCountriesAsync();
+    }
+
+    /// <summary>
+    /// Gets the language service for accessing translated strings
+    /// </summary>
+    public ILanguageService? Lang => _languageService;
+
+    /// <summary>
+    /// Called when the application language changes
+    /// </summary>
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        // Notify all properties that depend on translations
+        OnPropertyChanged(nameof(Lang));
     }
 
     [RelayCommand]
@@ -443,7 +466,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void OpenSettings()
     {
-        var settingsDialog = new Views.SettingsDialog();
+        var settingsDialog = new Views.SettingsDialog(_languageService);
         settingsDialog.ShowDialog();
     }
 
