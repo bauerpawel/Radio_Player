@@ -98,6 +98,11 @@ public class RadioStation
     /// </summary>
     public bool IsFavorite { get; set; }
 
+    /// <summary>
+    /// Indicates if this is a custom station added by the user (not from Radio Browser API)
+    /// </summary>
+    public bool IsCustom { get; set; }
+
     public override string ToString() =>
         $"{Name} ({Country}) - {Codec} {Bitrate}kbps";
 }

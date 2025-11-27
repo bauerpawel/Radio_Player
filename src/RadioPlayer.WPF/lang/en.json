@@ -20,6 +20,10 @@
     "TopStations": "Top Stations",
     "Favorites": "Favorites",
     "History": "History",
+    "CustomStations": "Custom Stations",
+    "MyStations": "My Stations",
+    "AddCustomStation": "Add Station",
+    "DeleteCustomStation": "Delete Station",
     "Filters": "Filters",
     "Country": "Country",
     "Language": "Language",
@@ -151,6 +155,28 @@
     "IcyUrl": "ICY URL",
     "CurrentTrack": "Current Track",
     "Close": "Close"
+  },
+
+  "CustomStation": {
+    "AddTitle": "Add Custom Station",
+    "StreamUrl": "Stream URL *",
+    "StreamUrlHint": "https://example.com/stream",
+    "StreamUrlDescription": "Enter the direct audio stream URL (HTTP or HTTPS)",
+    "TestStream": "Test Stream",
+    "StationName": "Station Name *",
+    "StationNameHint": "e.g. My Favorite Station",
+    "LogoUrl": "Logo URL",
+    "LogoUrlHint": "https://example.com/logo.png",
+    "Genre": "Genre / Tags",
+    "GenreHint": "e.g. Rock, Pop, Jazz",
+    "Country": "Country",
+    "CountryHint": "e.g. Poland, USA, Germany",
+    "Language": "Language",
+    "LanguageHint": "e.g. Polish, English",
+    "Homepage": "Homepage",
+    "HomepageHint": "https://example.com",
+    "Add": "Add",
+    "Cancel": "Cancel"
   },
 
   "Messages": {
