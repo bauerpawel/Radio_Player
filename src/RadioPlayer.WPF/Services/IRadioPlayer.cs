@@ -71,6 +71,11 @@ public interface IRadioPlayer : IDisposable
     event EventHandler<Exception>? ErrorOccurred;
 
     /// <summary>
+    /// Event raised when PCM audio data is available (for recording)
+    /// </summary>
+    event EventHandler<PcmDataEventArgs>? PcmDataAvailable;
+
+    /// <summary>
     /// Start playing a radio station
     /// </summary>
     Task PlayAsync(RadioStation station, CancellationToken cancellationToken = default);
@@ -102,4 +107,38 @@ public enum PlaybackState
     Playing,
     Paused,
     Error
+}
+
+/// <summary>
+/// PCM audio data event arguments (for recording)
+/// </summary>
+public class PcmDataEventArgs : EventArgs
+{
+    /// <summary>
+    /// PCM audio data
+    /// </summary>
+    public byte[] Data { get; }
+
+    /// <summary>
+    /// Offset in the data array
+    /// </summary>
+    public int Offset { get; }
+
+    /// <summary>
+    /// Number of bytes
+    /// </summary>
+    public int Count { get; }
+
+    /// <summary>
+    /// Wave format of the PCM data
+    /// </summary>
+    public NAudio.Wave.WaveFormat WaveFormat { get; }
+
+    public PcmDataEventArgs(byte[] data, int offset, int count, NAudio.Wave.WaveFormat waveFormat)
+    {
+        Data = data;
+        Offset = offset;
+        Count = count;
+        WaveFormat = waveFormat;
+    }
 }

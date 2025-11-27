@@ -100,6 +100,11 @@ public partial class App : Application
         services.AddSingleton<IRadioBrowserService, RadioBrowserService>();
         services.AddSingleton<IRadioStationRepository, RadioStationRepository>();
         services.AddSingleton<IRadioPlayer, NAudioRadioPlayer>();
+        services.AddSingleton<IRadioRecorder>(provider =>
+        {
+            var radioPlayer = provider.GetRequiredService<IRadioPlayer>();
+            return new NAudioRadioRecorder(radioPlayer);
+        });
         services.AddSingleton<ILanguageService, LanguageService>();
         services.AddSingleton<IStreamValidationService, StreamValidationService>();
         services.AddSingleton<IExportImportService, ExportImportService>();

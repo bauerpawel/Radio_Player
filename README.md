@@ -39,6 +39,14 @@ A modern desktop radio player built with .NET 10 and WPF, providing access to 51
 - ✅ **Buffering visualization** - see real-time buffer status
 - ✅ **Now Playing display** - shows current track with station logo
 
+### Recording
+- ✅ **Stream recording** - record currently playing radio to file
+- ✅ **Multiple formats** - WAV (lossless) and MP3 (128 kbps) output
+- ✅ **Automatic file naming** - station name + timestamp
+- ✅ **Real-time duration display** - see recording progress
+- ✅ **Metadata tracking** - captures ICY metadata during recording
+- ✅ **One-click operation** - start/stop recording with single button
+
 ### Additional Features
 - ✅ **Multi-language support** - Polish, English, and German interface (easily extensible)
 - ✅ **System tray integration** - minimize to tray (optional in settings)
@@ -115,6 +123,31 @@ See `libs/flac/README.md` for detailed instructions.
 6. Adjust volume with the slider
 7. View station details with the Details button
 8. Check your listening history with the History button
+
+### Recording Radio Streams
+
+Record your favorite radio broadcasts with just one click:
+
+1. **Start playing** a station you want to record
+2. **Click the red record button** (🔴) in the player controls
+3. **Recording starts immediately** - duration timer appears
+4. **Click the stop button** to end recording
+5. **Files are saved automatically** to `%USERPROFILE%\Music\Radio Recordings\`
+
+**Recording Features:**
+- **File Format:** WAV (lossless) or MP3 (128 kbps) - configurable in AppConstants
+- **File Naming:** `StationName_YYYYMMDD_HHMMSS.wav/mp3`
+- **Real-time Duration:** See recording time as HH:MM:SS
+- **ICY Metadata:** Captures "Now Playing" information
+- **Quality:** Records exactly what you hear - same quality as playback
+
+**Recording Location:**
+- Default: `C:\Users\[YourName]\Music\Radio Recordings\`
+- Can be changed in `AppConstants.Recording.DefaultOutputDirectory`
+
+**Supported Formats:**
+- All streaming formats are recorded: MP3, AAC, OGG/Vorbis, OGG/Opus, OGG/FLAC
+- Output converted to WAV or MP3 for universal compatibility
 
 ## 📦 Building Standalone EXE
 

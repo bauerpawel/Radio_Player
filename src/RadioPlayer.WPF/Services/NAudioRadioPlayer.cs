@@ -114,6 +114,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
     public event EventHandler<IcyMetadata>? MetadataReceived;
     public event EventHandler<StreamProgress>? ProgressUpdated;
     public event EventHandler<Exception>? ErrorOccurred;
+    public event EventHandler<PcmDataEventArgs>? PcmDataAvailable;
 
     public NAudioRadioPlayer()
         : this(new HttpClient())
@@ -523,7 +524,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
 
             if (decodedBytes > 0 && _bufferedWaveProvider != null)
             {
-                _bufferedWaveProvider.AddSamples(_pcmBuffer, 0, decodedBytes);
+                AddSamplesAndNotify(_pcmBuffer, 0, decodedBytes);
             }
         }
 
@@ -618,7 +619,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
                         byte[] pcmBuffer = new byte[packet.Length * 2];
                         Buffer.BlockCopy(packet, 0, pcmBuffer, 0, pcmBuffer.Length);
 
-                        _bufferedWaveProvider.AddSamples(pcmBuffer, 0, pcmBuffer.Length);
+                        AddSamplesAndNotify(pcmBuffer, 0, pcmBuffer.Length);
                         chunkCount++;
 
                         if (chunkCount % 50 == 0)
@@ -718,7 +719,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
 
                 if (_bufferedWaveProvider != null && bytesToAdd > 0)
                 {
-                    _bufferedWaveProvider.AddSamples(byteBuffer, 0, bytesToAdd);
+                    AddSamplesAndNotify(byteBuffer, 0, bytesToAdd);
                     chunkCount++;
 
                     if (chunkCount % 20 == 0) // Log every 20 chunks
@@ -751,7 +752,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
             {
                 if (_bufferedWaveProvider != null)
                 {
-                    _bufferedWaveProvider.AddSamples(pcm, 0, length);
+                    AddSamplesAndNotify(pcm, 0, length);
                 }
             };
 
@@ -846,7 +847,7 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
             {
                 if (_bufferedWaveProvider != null)
                 {
-                    _bufferedWaveProvider.AddSamples(buffer, 0, bytesRead);
+                    AddSamplesAndNotify(buffer, 0, bytesRead);
                 }
             }
         }
@@ -980,6 +981,24 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         };
 
         ProgressUpdated?.Invoke(this, progress);
+    }
+
+    /// <summary>
+    /// Helper method to add samples to buffer and notify recording listeners
+    /// </summary>
+    private void AddSamplesAndNotify(byte[] buffer, int offset, int count)
+    {
+        if (_bufferedWaveProvider == null)
+            return;
+
+        _bufferedWaveProvider.AddSamples(buffer, offset, count);
+
+        // Notify recording listeners
+        if (PcmDataAvailable != null)
+        {
+            var eventArgs = new PcmDataEventArgs(buffer, offset, count, _bufferedWaveProvider.WaveFormat);
+            PcmDataAvailable.Invoke(this, eventArgs);
+        }
     }
 
     public void Dispose()

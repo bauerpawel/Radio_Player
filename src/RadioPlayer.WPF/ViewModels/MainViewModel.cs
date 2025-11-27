@@ -19,6 +19,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IRadioBrowserService? _radioBrowserService;
     private readonly IRadioStationRepository? _repository;
     private readonly IRadioPlayer? _radioPlayer;
+    private readonly IRadioRecorder? _radioRecorder;
     private readonly ILanguageService? _languageService;
     private readonly IStreamValidationService? _streamValidationService;
     private readonly IExportImportService? _exportImportService;
@@ -74,9 +75,22 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<string> _availableCountries = new();
 
+    // Recording properties
+    [ObservableProperty]
+    private bool _isRecording;
+
+    [ObservableProperty]
+    private string _recordingDuration = "00:00:00";
+
+    [ObservableProperty]
+    private string _recordingStatus = "Not recording";
+
     // Playback history tracking
     private DateTime? _currentPlaybackStartTime;
     private int? _currentPlaybackStationId;
+
+    // Recording state
+    private System.Timers.Timer? _recordingTimer;
 
     public MainViewModel()
     {
@@ -87,6 +101,7 @@ public partial class MainViewModel : ObservableObject
         IRadioBrowserService radioBrowserService,
         IRadioStationRepository repository,
         IRadioPlayer radioPlayer,
+        IRadioRecorder radioRecorder,
         ILanguageService languageService,
         IStreamValidationService streamValidationService,
         IExportImportService exportImportService)
@@ -94,6 +109,7 @@ public partial class MainViewModel : ObservableObject
         _radioBrowserService = radioBrowserService;
         _repository = repository;
         _radioPlayer = radioPlayer;
+        _radioRecorder = radioRecorder;
         _languageService = languageService;
         _streamValidationService = streamValidationService;
         _exportImportService = exportImportService;
@@ -105,6 +121,14 @@ public partial class MainViewModel : ObservableObject
             _radioPlayer.MetadataReceived += OnMetadataReceived;
             _radioPlayer.ProgressUpdated += OnProgressUpdated;
             _radioPlayer.ErrorOccurred += OnErrorOccurred;
+        }
+
+        // Subscribe to recorder events
+        if (_radioRecorder != null)
+        {
+            _radioRecorder.RecordingStarted += OnRecordingStarted;
+            _radioRecorder.RecordingStopped += OnRecordingStopped;
+            _radioRecorder.RecordingError += OnRecordingError;
         }
 
         // Subscribe to language change events
@@ -431,6 +455,13 @@ public partial class MainViewModel : ObservableObject
 
     private void OnMetadataReceived(object? sender, IcyMetadata metadata)
     {
+        // Update metadata for recording
+        if (_radioRecorder != null && IsRecording)
+        {
+            _radioRecorder.UpdateMetadata(metadata);
+        }
+
+        // Update UI
         CurrentTrack = metadata.ToString();
         NowPlaying = metadata.ToString();
     }
@@ -686,4 +717,158 @@ public partial class MainViewModel : ObservableObject
             System.Diagnostics.Debug.WriteLine($"Error ending playback history: {ex.Message}");
         }
     }
+
+    #region Recording
+
+    [RelayCommand(CanExecute = nameof(CanStartRecording))]
+    private async Task StartRecordingAsync()
+    {
+        if (_radioRecorder == null || CurrentlyPlayingStation == null)
+            return;
+
+        try
+        {
+            // Generate filename
+            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var stationName = SanitizeFilename(CurrentlyPlayingStation.Name);
+            var format = Helpers.AppConstants.Recording.DefaultFormat;
+            var extension = format == RecordingFormat.Mp3 ? "mp3" : "wav";
+            var filename = $"{stationName}_{timestamp}.{extension}";
+
+            // Ensure output directory exists
+            var outputDir = Helpers.AppConstants.Recording.DefaultOutputDirectory;
+            if (!System.IO.Directory.Exists(outputDir))
+            {
+                System.IO.Directory.CreateDirectory(outputDir);
+            }
+
+            var outputPath = System.IO.Path.Combine(outputDir, filename);
+
+            // Start recording
+            await _radioRecorder.StartRecordingAsync(CurrentlyPlayingStation, outputPath, format);
+
+            IsRecording = true;
+            RecordingStatus = $"Recording to: {filename}";
+
+            // Start timer to update recording duration
+            _recordingTimer = new System.Timers.Timer(1000); // Update every second
+            _recordingTimer.Elapsed += (s, e) =>
+            {
+                if (_radioRecorder != null && _radioRecorder.IsRecording)
+                {
+                    var duration = _radioRecorder.RecordingDuration;
+                    RecordingDuration = $"{(int)duration.TotalHours:D2}:{duration.Minutes:D2}:{duration.Seconds:D2}";
+                }
+            };
+            _recordingTimer.Start();
+
+            DebugLogger.Log("VIEWMODEL", $"Recording started: {outputPath}");
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"Failed to start recording: {ex.Message}",
+                "Recording Error",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
+        }
+    }
+
+    private bool CanStartRecording()
+    {
+        return _radioRecorder != null && !IsRecording && IsPlaying && CurrentlyPlayingStation != null;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanStopRecording))]
+    private async Task StopRecordingAsync()
+    {
+        if (_radioRecorder == null || !IsRecording)
+            return;
+
+        try
+        {
+            // Stop timer
+            _recordingTimer?.Stop();
+            _recordingTimer?.Dispose();
+            _recordingTimer = null;
+
+            // Stop recording
+            var result = await _radioRecorder.StopRecordingAsync();
+
+            IsRecording = false;
+            RecordingStatus = "Not recording";
+            RecordingDuration = "00:00:00";
+
+            // Show success message
+            var formatStr = result.ConversionSuccessful && result.FilePath.EndsWith(".mp3") ? "MP3" : "WAV";
+            var sizeStr = $"{result.FileSizeBytes / 1024.0 / 1024.0:F2} MB";
+            System.Windows.MessageBox.Show(
+                $"Recording saved successfully!\n\n" +
+                $"File: {System.IO.Path.GetFileName(result.FilePath)}\n" +
+                $"Duration: {result.Duration.TotalMinutes:F1} minutes\n" +
+                $"Format: {formatStr}\n" +
+                $"Size: {sizeStr}",
+                "Recording Saved",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information);
+
+            DebugLogger.Log("VIEWMODEL", $"Recording stopped: {result.FilePath}");
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"Failed to stop recording: {ex.Message}",
+                "Recording Error",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
+        }
+    }
+
+    private bool CanStopRecording()
+    {
+        return _radioRecorder != null && IsRecording;
+    }
+
+    private void OnRecordingStarted(object? sender, string filePath)
+    {
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] Recording started: {filePath}");
+    }
+
+    private void OnRecordingStopped(object? sender, RecordingResult result)
+    {
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] Recording stopped: {result.FilePath}");
+    }
+
+    private void OnRecordingError(object? sender, Exception ex)
+    {
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] Recording error: {ex.Message}");
+
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            IsRecording = false;
+            RecordingStatus = $"Recording error: {ex.Message}";
+
+            System.Windows.MessageBox.Show(
+                $"Recording error: {ex.Message}",
+                "Recording Error",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
+        });
+    }
+
+    private string SanitizeFilename(string filename)
+    {
+        var invalid = System.IO.Path.GetInvalidFileNameChars();
+        var sanitized = string.Join("_", filename.Split(invalid, StringSplitOptions.RemoveEmptyEntries)).TrimEnd('.');
+
+        // Limit length to 50 characters
+        if (sanitized.Length > 50)
+        {
+            sanitized = sanitized.Substring(0, 50);
+        }
+
+        return sanitized;
+    }
+
+    #endregion
 }
