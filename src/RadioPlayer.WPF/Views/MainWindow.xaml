@@ -395,10 +395,11 @@
                         </ToggleButton>
 
                         <!-- Recording Controls -->
-                        <Separator Style="{StaticResource MaterialDesignSeparator}"
-                                  Margin="16,0"
-                                  Orientation="Vertical"
-                                  Height="40"/>
+                        <Border Width="1"
+                                Height="40"
+                                Background="{DynamicResource MaterialDesignDivider}"
+                                Margin="16,0"
+                                VerticalAlignment="Center"/>
 
                         <Button Style="{StaticResource MaterialDesignIconButton}"
                                 Command="{Binding StartRecordingCommand}"
