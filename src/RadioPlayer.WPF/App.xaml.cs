@@ -102,6 +102,7 @@ public partial class App : Application
         services.AddSingleton<IRadioPlayer, NAudioRadioPlayer>();
         services.AddSingleton<ILanguageService, LanguageService>();
         services.AddSingleton<IStreamValidationService, StreamValidationService>();
+        services.AddSingleton<IExportImportService, ExportImportService>();
 
         // Register ViewModels
         services.AddTransient<MainViewModel>();

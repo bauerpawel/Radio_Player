@@ -72,7 +72,13 @@
       "Polish": "Polnisch",
       "English": "Englisch",
       "German": "Deutsch"
-    }
+    },
+    "BackupRestore": "Sicherung & Wiederherstellung",
+    "BackupRestoreDescription": "Exportieren Sie Ihre Favoriten und Einstellungen in eine JSON-Datei oder importieren Sie aus einer vorherigen Sicherung.",
+    "ExportBackup": "Sicherung exportieren",
+    "ImportBackup": "Sicherung importieren",
+    "ExportBackupTooltip": "Favoriten und Einstellungen in JSON-Datei exportieren",
+    "ImportBackupTooltip": "Favoriten und Einstellungen aus JSON-Datei importieren"
   },
 
   "About": {
@@ -192,6 +198,10 @@
     "Confirmation": "Bestätigung",
     "HistoryCleared": "Verlauf wurde gelöscht",
     "Success": "Erfolg",
-    "SettingsSaved": "Einstellungen erfolgreich gespeichert!\n\nHinweis: Einige Sprachänderungen erfordern möglicherweise einen Neustart der Anwendung, um vollständig wirksam zu werden."
+    "SettingsSaved": "Einstellungen erfolgreich gespeichert!\n\nHinweis: Einige Sprachänderungen erfordern möglicherweise einen Neustart der Anwendung, um vollständig wirksam zu werden.",
+    "ExportSuccess": "Sicherung erfolgreich exportiert!",
+    "ImportSuccess": "Sicherung erfolgreich importiert!\n\nEinstellungen und Favoriten wurden wiederhergestellt.",
+    "ImportMode": "Importmodus",
+    "ImportMergeQuestion": "Möchten Sie mit vorhandenen Favoriten zusammenführen?\n\nJa: Zu vorhandenen Favoriten hinzufügen\nNein: Alle Favoriten ersetzen\nAbbrechen: Import abbrechen"
   }
 }

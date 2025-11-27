@@ -21,6 +21,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IRadioPlayer? _radioPlayer;
     private readonly ILanguageService? _languageService;
     private readonly IStreamValidationService? _streamValidationService;
+    private readonly IExportImportService? _exportImportService;
 
     [ObservableProperty]
     private ObservableCollection<RadioStation> _stations = new();
@@ -87,13 +88,15 @@ public partial class MainViewModel : ObservableObject
         IRadioStationRepository repository,
         IRadioPlayer radioPlayer,
         ILanguageService languageService,
-        IStreamValidationService streamValidationService)
+        IStreamValidationService streamValidationService,
+        IExportImportService exportImportService)
     {
         _radioBrowserService = radioBrowserService;
         _repository = repository;
         _radioPlayer = radioPlayer;
         _languageService = languageService;
         _streamValidationService = streamValidationService;
+        _exportImportService = exportImportService;
 
         // Subscribe to player events
         if (_radioPlayer != null)
@@ -469,7 +472,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void OpenSettings()
     {
-        var settingsDialog = new Views.SettingsDialog(_languageService);
+        var settingsDialog = new Views.SettingsDialog(_languageService, _exportImportService);
         settingsDialog.ShowDialog();
     }
 

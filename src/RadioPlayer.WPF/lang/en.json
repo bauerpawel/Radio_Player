@@ -72,7 +72,13 @@
       "Polish": "Polish",
       "English": "English",
       "German": "German"
-    }
+    },
+    "BackupRestore": "Backup & Restore",
+    "BackupRestoreDescription": "Export your favorites and settings to a JSON file, or import from a previous backup.",
+    "ExportBackup": "Export Backup",
+    "ImportBackup": "Import Backup",
+    "ExportBackupTooltip": "Export favorites and settings to JSON file",
+    "ImportBackupTooltip": "Import favorites and settings from JSON file"
   },
 
   "About": {
@@ -192,6 +198,10 @@
     "Confirmation": "Confirmation",
     "HistoryCleared": "History has been cleared",
     "Success": "Success",
-    "SettingsSaved": "Settings saved successfully!\n\nNote: Some language changes may require application restart to take full effect."
+    "SettingsSaved": "Settings saved successfully!\n\nNote: Some language changes may require application restart to take full effect.",
+    "ExportSuccess": "Backup exported successfully!",
+    "ImportSuccess": "Backup imported successfully!\n\nSettings and favorites have been restored.",
+    "ImportMode": "Import Mode",
+    "ImportMergeQuestion": "Do you want to merge with existing favorites?\n\nYes: Add to existing favorites\nNo: Replace all favorites\nCancel: Abort import"
   }
 }
