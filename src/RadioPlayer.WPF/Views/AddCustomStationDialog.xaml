@@ -31,7 +31,6 @@
 
                 <!-- Test Stream Button -->
                 <Button x:Name="TestStreamButton"
-                       Content="{helpers:Translate CustomStation.TestStream}"
                        Click="TestStreamButton_Click"
                        Style="{StaticResource MaterialDesignOutlinedButton}"
                        HorizontalAlignment="Left"
