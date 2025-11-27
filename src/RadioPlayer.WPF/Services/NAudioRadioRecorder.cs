@@ -21,7 +21,8 @@ public class NAudioRadioRecorder : IRadioRecorder
     private Stopwatch? _recordingStopwatch;
     private RadioStation? _currentStation;
     private IcyMetadata? _latestMetadata;
-    private string? _currentOutputPath;
+    private string? _currentOutputPath;  // WAV file path (temporary or final)
+    private string? _finalOutputPath;    // Final output path (MP3 or WAV)
     private RecordingFormat _currentFormat;
     private bool _disposed;
 
@@ -52,12 +53,15 @@ public class NAudioRadioRecorder : IRadioRecorder
         {
             _currentStation = station;
             _currentFormat = format;
+            _finalOutputPath = outputPath;  // Save final output path
 
             // For MP3 format, record to temporary WAV file first
             if (format == RecordingFormat.Mp3)
             {
-                _currentOutputPath = Path.GetTempFileName();
-                _currentOutputPath = Path.ChangeExtension(_currentOutputPath, ".wav");
+                // Create temp WAV file in same directory as final MP3
+                var directory = Path.GetDirectoryName(outputPath);
+                var tempFileName = Path.GetFileNameWithoutExtension(outputPath) + ".tmp.wav";
+                _currentOutputPath = Path.Combine(directory ?? "", tempFileName);
             }
             else
             {
@@ -65,10 +69,10 @@ public class NAudioRadioRecorder : IRadioRecorder
             }
 
             // Ensure output directory exists
-            var directory = Path.GetDirectoryName(_currentOutputPath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            var outputDirectory = Path.GetDirectoryName(_currentOutputPath);
+            if (!string.IsNullOrEmpty(outputDirectory) && !Directory.Exists(outputDirectory))
             {
-                Directory.CreateDirectory(directory);
+                Directory.CreateDirectory(outputDirectory);
             }
 
             // Subscribe to PCM data events
@@ -166,6 +170,7 @@ public class NAudioRadioRecorder : IRadioRecorder
             _currentStation = null;
             _latestMetadata = null;
             _currentOutputPath = null;
+            _finalOutputPath = null;
         }
     }
 
@@ -200,7 +205,8 @@ public class NAudioRadioRecorder : IRadioRecorder
 
     private async Task<string> ConvertWavToMp3Async(string wavFilePath)
     {
-        var mp3FilePath = Path.ChangeExtension(wavFilePath, ".mp3");
+        // Use the final output path that was specified by the user
+        var mp3FilePath = _finalOutputPath!;
 
         await Task.Run(() =>
         {
