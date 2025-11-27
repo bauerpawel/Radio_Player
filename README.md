@@ -42,10 +42,11 @@ A modern desktop radio player built with .NET 10 and WPF, providing access to 51
 ### Recording
 - ✅ **Stream recording** - record currently playing radio to file
 - ✅ **Multiple formats** - WAV (lossless) and MP3 (128 kbps) output
-- ✅ **Automatic file naming** - station name + timestamp
+- ✅ **SaveFileDialog integration** - choose where to save with visual file picker
+- ✅ **Smart file naming** - station name + timestamp as default
 - ✅ **Real-time duration display** - see recording progress
 - ✅ **Metadata tracking** - captures ICY metadata during recording
-- ✅ **One-click operation** - start/stop recording with single button
+- ✅ **Format selection** - choose WAV or MP3 from dialog dropdown
 
 ### Additional Features
 - ✅ **Multi-language support** - Polish, English, and German interface (easily extensible)
@@ -126,24 +127,28 @@ See `libs/flac/README.md` for detailed instructions.
 
 ### Recording Radio Streams
 
-Record your favorite radio broadcasts with just one click:
+Record your favorite radio broadcasts with easy file management:
 
 1. **Start playing** a station you want to record
 2. **Click the red record button** (🔴) in the player controls
-3. **Recording starts immediately** - duration timer appears
-4. **Click the stop button** to end recording
-5. **Files are saved automatically** to `%USERPROFILE%\Music\Radio Recordings\`
+3. **Choose where to save** - SaveFileDialog appears with suggested filename
+4. **Select format** - WAV (lossless) or MP3 (128 kbps) from dropdown
+5. **Recording starts** - duration timer shows real-time progress
+6. **Click the stop button** to end recording
 
 **Recording Features:**
-- **File Format:** WAV (lossless) or MP3 (128 kbps) - configurable in AppConstants
-- **File Naming:** `StationName_YYYYMMDD_HHMMSS.wav/mp3`
+- **File Format Selection:** Choose WAV (lossless) or MP3 (128 kbps) when saving
+- **Custom Location:** Save anywhere on your computer
+- **Smart Naming:** Default name is `StationName_YYYYMMDD_HHMMSS.wav/mp3`
 - **Real-time Duration:** See recording time as HH:MM:SS
 - **ICY Metadata:** Captures "Now Playing" information
 - **Quality:** Records exactly what you hear - same quality as playback
+- **Overwrite Protection:** Dialog warns before overwriting existing files
 
-**Recording Location:**
-- Default: `C:\Users\[YourName]\Music\Radio Recordings\`
+**Default Save Location:**
+- Initial directory: `C:\Users\[YourName]\Music\Radio Recordings\`
 - Can be changed in `AppConstants.Recording.DefaultOutputDirectory`
+- You can choose any location via SaveFileDialog
 
 **Supported Formats:**
 - All streaming formats are recorded: MP3, AAC, OGG/Vorbis, OGG/Opus, OGG/FLAC

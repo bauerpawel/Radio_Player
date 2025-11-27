@@ -728,27 +728,52 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            // Generate filename
+            // Generate default filename
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             var stationName = SanitizeFilename(CurrentlyPlayingStation.Name);
             var format = Helpers.AppConstants.Recording.DefaultFormat;
             var extension = format == RecordingFormat.Mp3 ? "mp3" : "wav";
-            var filename = $"{stationName}_{timestamp}.{extension}";
+            var defaultFilename = $"{stationName}_{timestamp}.{extension}";
 
-            // Ensure output directory exists
-            var outputDir = Helpers.AppConstants.Recording.DefaultOutputDirectory;
-            if (!System.IO.Directory.Exists(outputDir))
+            // Show SaveFileDialog to let user choose location and filename
+            var saveDialog = new Microsoft.Win32.SaveFileDialog
             {
-                System.IO.Directory.CreateDirectory(outputDir);
+                Title = "Save Recording As",
+                FileName = defaultFilename,
+                DefaultExt = extension,
+                Filter = format == RecordingFormat.Mp3
+                    ? "MP3 Files (*.mp3)|*.mp3|WAV Files (*.wav)|*.wav|All Files (*.*)|*.*"
+                    : "WAV Files (*.wav)|*.wav|MP3 Files (*.mp3)|*.mp3|All Files (*.*)|*.*",
+                InitialDirectory = Helpers.AppConstants.Recording.DefaultOutputDirectory,
+                AddExtension = true,
+                OverwritePrompt = true
+            };
+
+            // Ensure initial directory exists
+            if (!System.IO.Directory.Exists(saveDialog.InitialDirectory))
+            {
+                System.IO.Directory.CreateDirectory(saveDialog.InitialDirectory);
             }
 
-            var outputPath = System.IO.Path.Combine(outputDir, filename);
+            // Show dialog
+            var result = saveDialog.ShowDialog();
+            if (result != true)
+            {
+                // User cancelled
+                return;
+            }
+
+            var outputPath = saveDialog.FileName;
+
+            // Determine format from file extension
+            var selectedExtension = System.IO.Path.GetExtension(outputPath).ToLowerInvariant();
+            var recordingFormat = selectedExtension == ".mp3" ? RecordingFormat.Mp3 : RecordingFormat.Wav;
 
             // Start recording
-            await _radioRecorder.StartRecordingAsync(CurrentlyPlayingStation, outputPath, format);
+            await _radioRecorder.StartRecordingAsync(CurrentlyPlayingStation, outputPath, recordingFormat);
 
             IsRecording = true;
-            RecordingStatus = $"Recording to: {filename}";
+            RecordingStatus = $"Recording to: {System.IO.Path.GetFileName(outputPath)}";
 
             // Start timer to update recording duration
             _recordingTimer = new System.Timers.Timer(1000); // Update every second
