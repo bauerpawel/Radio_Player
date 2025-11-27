@@ -443,48 +443,63 @@ public partial class MainViewModel : ObservableObject
     // Event handlers for RadioPlayer events
     private void OnPlaybackStateChanged(object? sender, PlaybackState state)
     {
-        IsPlaying = state == PlaybackState.Playing;
-        IsBuffering = state == PlaybackState.Buffering;
-
-        StatusMessage = state switch
+        // Ensure UI updates happen on the UI thread
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
         {
-            PlaybackState.Stopped => "Stopped",
-            PlaybackState.Connecting => "Connecting...",
-            PlaybackState.Buffering => "Buffering...",
-            PlaybackState.Playing => "Playing",
-            PlaybackState.Paused => "Paused",
-            PlaybackState.Error => "Error occurred",
-            _ => "Unknown"
-        };
+            IsPlaying = state == PlaybackState.Playing;
+            IsBuffering = state == PlaybackState.Buffering;
+
+            StatusMessage = state switch
+            {
+                PlaybackState.Stopped => "Stopped",
+                PlaybackState.Connecting => "Connecting...",
+                PlaybackState.Buffering => "Buffering...",
+                PlaybackState.Playing => "Playing",
+                PlaybackState.Paused => "Paused",
+                PlaybackState.Error => "Error occurred",
+                _ => "Unknown"
+            };
+        });
     }
 
     private void OnMetadataReceived(object? sender, IcyMetadata metadata)
     {
-        // Update metadata for recording
+        // Update metadata for recording (can be done on any thread)
         if (_radioRecorder != null && IsRecording)
         {
             _radioRecorder.UpdateMetadata(metadata);
         }
 
-        // Update UI
-        CurrentTrack = metadata.ToString();
-        NowPlaying = metadata.ToString();
+        // Update UI on UI thread
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            CurrentTrack = metadata.ToString();
+            NowPlaying = metadata.ToString();
+        });
     }
 
     private void OnProgressUpdated(object? sender, StreamProgress progress)
     {
-        if (progress.IsBuffering)
+        // Update UI on UI thread
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
         {
-            StatusMessage = $"Buffering... {progress.BufferDuration.TotalSeconds:F1}s";
-        }
+            if (progress.IsBuffering)
+            {
+                StatusMessage = $"Buffering... {progress.BufferDuration.TotalSeconds:F1}s";
+            }
+        });
     }
 
     private void OnErrorOccurred(object? sender, Exception ex)
     {
-        StatusMessage = $"Error: {ex.Message}";
-        IsPlaying = false;
-        CurrentlyPlayingStation = null;
-        CurrentTrack = "No track information";
+        // Update UI on UI thread
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            StatusMessage = $"Error: {ex.Message}";
+            IsPlaying = false;
+            CurrentlyPlayingStation = null;
+            CurrentTrack = "No track information";
+        });
     }
 
     partial void OnVolumeChanged(float value)
