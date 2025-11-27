@@ -35,6 +35,7 @@ public partial class MainViewModel : ObservableObject
     private RadioStation? _selectedStation;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartRecordingCommand))]
     private RadioStation? _currentlyPlayingStation;
 
     [ObservableProperty]
@@ -47,6 +48,7 @@ public partial class MainViewModel : ObservableObject
     private string _statusMessage = "Ready";
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartRecordingCommand))]
     private bool _isPlaying;
 
     [ObservableProperty]
@@ -78,6 +80,8 @@ public partial class MainViewModel : ObservableObject
 
     // Recording properties
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartRecordingCommand))]
+    [NotifyCanExecuteChangedFor(nameof(StopRecordingCommand))]
     private bool _isRecording;
 
     [ObservableProperty]
