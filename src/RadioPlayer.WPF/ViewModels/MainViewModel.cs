@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RadioPlayer.WPF.Models;
 using RadioPlayer.WPF.Services;
+using RadioPlayer.WPF.Helpers;
 
 namespace RadioPlayer.WPF.ViewModels;
 
