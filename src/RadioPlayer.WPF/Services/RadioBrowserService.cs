@@ -59,9 +59,9 @@ public class RadioBrowserService : IRadioBrowserService
                     TimeSpan.FromSeconds(Math.Pow(AppConstants.Network.ExponentialBackoffBase, retryAttempt)),
                 onRetry: (exception, timeSpan, retryCount, context) =>
                 {
-                    // TODO: Add logging
-                    System.Diagnostics.Debug.WriteLine(
-                        $"Retry {retryCount} after {timeSpan.TotalSeconds}s due to: {exception.Message}");
+                    DebugLogger.Log("RadioBrowserService",
+                        $"Retry attempt {retryCount}/{AppConstants.Network.RetryAttempts} after {timeSpan.TotalSeconds:F1}s. " +
+                        $"Reason: {exception.GetType().Name} - {exception.Message}");
                 });
     }
 
