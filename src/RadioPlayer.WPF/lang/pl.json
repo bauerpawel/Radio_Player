@@ -72,7 +72,13 @@
       "Polish": "Polski",
       "English": "Angielski",
       "German": "Niemiecki"
-    }
+    },
+    "BackupRestore": "Kopia zapasowa i przywracanie",
+    "BackupRestoreDescription": "Eksportuj swoje ulubione i ustawienia do pliku JSON lub zaimportuj z poprzedniej kopii zapasowej.",
+    "ExportBackup": "Eksportuj kopię zapasową",
+    "ImportBackup": "Importuj kopię zapasową",
+    "ExportBackupTooltip": "Eksportuj ulubione i ustawienia do pliku JSON",
+    "ImportBackupTooltip": "Importuj ulubione i ustawienia z pliku JSON"
   },
 
   "About": {
@@ -192,6 +198,10 @@
     "Confirmation": "Potwierdzenie",
     "HistoryCleared": "Historia została wyczyszczona",
     "Success": "Sukces",
-    "SettingsSaved": "Ustawienia zapisane pomyślnie!\n\nUwaga: Niektóre zmiany języka mogą wymagać ponownego uruchomienia aplikacji, aby w pełni zadziałały."
+    "SettingsSaved": "Ustawienia zapisane pomyślnie!\n\nUwaga: Niektóre zmiany języka mogą wymagać ponownego uruchomienia aplikacji, aby w pełni zadziałały.",
+    "ExportSuccess": "Kopia zapasowa została pomyślnie wyeksportowana!",
+    "ImportSuccess": "Kopia zapasowa została pomyślnie zaimportowana!\n\nUstawienia i ulubione zostały przywrócone.",
+    "ImportMode": "Tryb importu",
+    "ImportMergeQuestion": "Czy chcesz połączyć z istniejącymi ulubionymi?\n\nTak: Dodaj do istniejących ulubionych\nNie: Zastąp wszystkie ulubione\nAnuluj: Przerwij import"
   }
 }
