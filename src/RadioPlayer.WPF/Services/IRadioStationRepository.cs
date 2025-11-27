@@ -18,6 +18,7 @@ public interface IRadioStationRepository
     Task UpdateStationAsync(RadioStation station);
     Task DeleteStationAsync(int id);
     Task<List<RadioStation>> SearchStationsAsync(string searchTerm);
+    Task<List<RadioStation>> GetCustomStationsAsync();
 
     // Favorites management
     Task<List<RadioStation>> GetFavoriteStationsAsync();

@@ -127,6 +127,46 @@
 
                         <Separator Margin="0,16" />
 
+                        <TextBlock Text="{helpers:Translate Browse.CustomStations}"
+                                  FontSize="14"
+                                  FontWeight="Medium"
+                                  Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                  Margin="0,0,0,12"/>
+
+                        <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                                Command="{Binding LoadCustomStationsCommand}"
+                                Margin="0,0,0,8"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Radio" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="{helpers:Translate Browse.MyStations}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Command="{Binding AddCustomStationCommand}"
+                                Margin="0,0,0,8"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Plus" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="{helpers:Translate Browse.AddCustomStation}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                Command="{Binding DeleteCustomStationCommand}"
+                                IsEnabled="{Binding SelectedStation.IsCustom}"
+                                Margin="0,0,0,8"
+                                HorizontalAlignment="Stretch"
+                                Foreground="{DynamicResource ValidationErrorBrush}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Delete" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="{helpers:Translate Browse.DeleteCustomStation}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Separator Margin="0,16" />
+
                         <TextBlock Text="{helpers:Translate Browse.Filters}"
                                   FontSize="14"
                                   FontWeight="Medium"

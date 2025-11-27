@@ -54,7 +54,38 @@ public class RadioStationRepository : IRadioStationRepository
 
             // Create tables
             CreateTables(connection);
+
+            // Run migrations
+            MigrateDatabase(connection);
         });
+    }
+
+    private void MigrateDatabase(SqliteConnection connection)
+    {
+        // Check if IsCustom column exists, if not add it
+        using var checkCommand = connection.CreateCommand();
+        checkCommand.CommandText = "PRAGMA table_info(RadioStations)";
+
+        bool hasIsCustomColumn = false;
+        using (var reader = checkCommand.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                var columnName = reader.GetString(1);
+                if (columnName == "IsCustom")
+                {
+                    hasIsCustomColumn = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasIsCustomColumn)
+        {
+            using var alterCommand = connection.CreateCommand();
+            alterCommand.CommandText = "ALTER TABLE RadioStations ADD COLUMN IsCustom INTEGER DEFAULT 0";
+            alterCommand.ExecuteNonQuery();
+        }
     }
 
     private void CreateTables(SqliteConnection connection)
@@ -74,6 +105,7 @@ public class RadioStationRepository : IRadioStationRepository
                 LogoUrl TEXT,
                 Homepage TEXT,
                 IsActive INTEGER DEFAULT 1,
+                IsCustom INTEGER DEFAULT 0,
                 DateAdded TEXT DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -134,7 +166,7 @@ public class RadioStationRepository : IRadioStationRepository
             using var command = connection.CreateCommand();
             command.CommandText = @"
                 SELECT Id, StationUuid, Name, StreamUrl, Genre, Country, CountryCode,
-                       Language, Bitrate, Codec, LogoUrl, Homepage, IsActive, DateAdded
+                       Language, Bitrate, Codec, LogoUrl, Homepage, IsActive, IsCustom, DateAdded
                 FROM RadioStations
                 WHERE IsActive = 1
                 ORDER BY Name";
@@ -159,7 +191,7 @@ public class RadioStationRepository : IRadioStationRepository
             using var command = connection.CreateCommand();
             command.CommandText = @"
                 SELECT Id, StationUuid, Name, StreamUrl, Genre, Country, CountryCode,
-                       Language, Bitrate, Codec, LogoUrl, Homepage, IsActive, DateAdded
+                       Language, Bitrate, Codec, LogoUrl, Homepage, IsActive, IsCustom, DateAdded
                 FROM RadioStations
                 WHERE Id = @Id";
 
@@ -185,7 +217,7 @@ public class RadioStationRepository : IRadioStationRepository
             using var command = connection.CreateCommand();
             command.CommandText = @"
                 SELECT Id, StationUuid, Name, StreamUrl, Genre, Country, CountryCode,
-                       Language, Bitrate, Codec, LogoUrl, Homepage, IsActive, DateAdded
+                       Language, Bitrate, Codec, LogoUrl, Homepage, IsActive, IsCustom, DateAdded
                 FROM RadioStations
                 WHERE StationUuid = @Uuid";
 
@@ -212,10 +244,10 @@ public class RadioStationRepository : IRadioStationRepository
             command.CommandText = @"
                 INSERT INTO RadioStations
                 (StationUuid, Name, StreamUrl, Genre, Country, CountryCode, Language,
-                 Bitrate, Codec, LogoUrl, Homepage, IsActive, DateAdded)
+                 Bitrate, Codec, LogoUrl, Homepage, IsActive, IsCustom, DateAdded)
                 VALUES
                 (@StationUuid, @Name, @StreamUrl, @Genre, @Country, @CountryCode, @Language,
-                 @Bitrate, @Codec, @LogoUrl, @Homepage, @IsActive, @DateAdded);
+                 @Bitrate, @Codec, @LogoUrl, @Homepage, @IsActive, @IsCustom, @DateAdded);
                 SELECT last_insert_rowid();";
 
             AddStationParameters(command, station);
@@ -246,7 +278,8 @@ public class RadioStationRepository : IRadioStationRepository
                     Codec = @Codec,
                     LogoUrl = @LogoUrl,
                     Homepage = @Homepage,
-                    IsActive = @IsActive
+                    IsActive = @IsActive,
+                    IsCustom = @IsCustom
                 WHERE Id = @Id";
 
             command.Parameters.AddWithValue("@Id", station.Id);
@@ -283,13 +316,40 @@ public class RadioStationRepository : IRadioStationRepository
             using var command = connection.CreateCommand();
             command.CommandText = @"
                 SELECT Id, StationUuid, Name, StreamUrl, Genre, Country, CountryCode,
-                       Language, Bitrate, Codec, LogoUrl, Homepage, IsActive, DateAdded
+                       Language, Bitrate, Codec, LogoUrl, Homepage, IsActive, IsCustom, DateAdded
                 FROM RadioStations
                 WHERE IsActive = 1
                   AND (Name LIKE @Search OR Genre LIKE @Search OR Country LIKE @Search)
                 ORDER BY Name";
 
             command.Parameters.AddWithValue("@Search", $"%{searchTerm}%");
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                stations.Add(MapReaderToStation(reader));
+            }
+
+            return stations;
+        });
+    }
+
+    public async Task<List<RadioStation>> GetCustomStationsAsync()
+    {
+        return await Task.Run(() =>
+        {
+            var stations = new List<RadioStation>();
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+                SELECT Id, StationUuid, Name, StreamUrl, Genre, Country, CountryCode,
+                       Language, Bitrate, Codec, LogoUrl, Homepage, IsActive, IsCustom, DateAdded
+                FROM RadioStations
+                WHERE IsActive = 1 AND IsCustom = 1
+                ORDER BY DateAdded DESC, Name";
 
             using var reader = command.ExecuteReader();
             while (reader.Read())
@@ -317,7 +377,7 @@ public class RadioStationRepository : IRadioStationRepository
             using var command = connection.CreateCommand();
             command.CommandText = @"
                 SELECT s.Id, s.StationUuid, s.Name, s.StreamUrl, s.Genre, s.Country, s.CountryCode,
-                       s.Language, s.Bitrate, s.Codec, s.LogoUrl, s.Homepage, s.IsActive, s.DateAdded
+                       s.Language, s.Bitrate, s.Codec, s.LogoUrl, s.Homepage, s.IsActive, s.IsCustom, s.DateAdded
                 FROM RadioStations s
                 INNER JOIN Favorites f ON s.Id = f.StationId
                 WHERE s.IsActive = 1
@@ -642,6 +702,7 @@ public class RadioStationRepository : IRadioStationRepository
         command.Parameters.AddWithValue("@LogoUrl", station.Favicon ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("@Homepage", station.Homepage ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("@IsActive", station.IsActive ? 1 : 0);
+        command.Parameters.AddWithValue("@IsCustom", station.IsCustom ? 1 : 0);
         command.Parameters.AddWithValue("@DateAdded", station.DateAdded.ToString("o"));
     }
 
@@ -662,7 +723,8 @@ public class RadioStationRepository : IRadioStationRepository
             Favicon = reader.IsDBNull(10) ? string.Empty : reader.GetString(10),
             Homepage = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
             IsActive = reader.GetInt32(12) == 1,
-            DateAdded = DateTime.Parse(reader.GetString(13))
+            IsCustom = reader.GetInt32(13) == 1,
+            DateAdded = DateTime.Parse(reader.GetString(14))
         };
     }
 

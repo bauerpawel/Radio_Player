@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS RadioStations (
     LogoUrl TEXT,
     Homepage TEXT,
     IsActive INTEGER DEFAULT 1,
+    IsCustom INTEGER DEFAULT 0,
     DateAdded TEXT DEFAULT CURRENT_TIMESTAMP
 );
 

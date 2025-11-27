@@ -20,6 +20,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IRadioStationRepository? _repository;
     private readonly IRadioPlayer? _radioPlayer;
     private readonly ILanguageService? _languageService;
+    private readonly IStreamValidationService? _streamValidationService;
 
     [ObservableProperty]
     private ObservableCollection<RadioStation> _stations = new();
@@ -85,12 +86,14 @@ public partial class MainViewModel : ObservableObject
         IRadioBrowserService radioBrowserService,
         IRadioStationRepository repository,
         IRadioPlayer radioPlayer,
-        ILanguageService languageService)
+        ILanguageService languageService,
+        IStreamValidationService streamValidationService)
     {
         _radioBrowserService = radioBrowserService;
         _repository = repository;
         _radioPlayer = radioPlayer;
         _languageService = languageService;
+        _streamValidationService = streamValidationService;
 
         // Subscribe to player events
         if (_radioPlayer != null)
@@ -515,6 +518,101 @@ public partial class MainViewModel : ObservableObject
         {
             SelectedStation = historyDialog.SelectedStationToPlay;
             await PlayStationAsync();
+        }
+    }
+
+    [RelayCommand]
+    private async Task AddCustomStationAsync()
+    {
+        if (_repository == null || _streamValidationService == null) return;
+
+        try
+        {
+            // Show add custom station dialog
+            var dialog = new Views.AddCustomStationDialog(_streamValidationService);
+            var result = dialog.ShowDialog();
+
+            if (result == true && dialog.Station != null)
+            {
+                // Add station to database
+                dialog.Station.Id = await _repository.AddStationAsync(dialog.Station);
+
+                StatusMessage = $"Custom station '{dialog.Station.Name}' added successfully";
+
+                // Reload custom stations
+                await LoadCustomStationsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error adding custom station: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task LoadCustomStationsAsync()
+    {
+        if (_repository == null) return;
+
+        try
+        {
+            StatusMessage = "Loading custom stations...";
+
+            var customStations = await _repository.GetCustomStationsAsync();
+            await UpdateFavoriteStatusAsync(customStations);
+
+            Stations = new ObservableCollection<RadioStation>(customStations);
+            UpdateCurrentlyPlayingStationReference();
+
+            StatusMessage = customStations.Count == 0
+                ? "No custom stations yet. Add one!"
+                : $"Loaded {customStations.Count} custom stations";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error loading custom stations: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteCustomStationAsync()
+    {
+        if (_repository == null || SelectedStation == null) return;
+
+        // Only allow deleting custom stations
+        if (!SelectedStation.IsCustom)
+        {
+            StatusMessage = "Only custom stations can be deleted";
+            return;
+        }
+
+        try
+        {
+            var result = System.Windows.MessageBox.Show(
+                $"Are you sure you want to delete '{SelectedStation.Name}'?",
+                "Delete Custom Station",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Question);
+
+            if (result == System.Windows.MessageBoxResult.Yes)
+            {
+                // Stop playback if this station is currently playing
+                if (CurrentlyPlayingStation?.StationUuid == SelectedStation.StationUuid && IsPlaying)
+                {
+                    await StopStationAsync();
+                }
+
+                await _repository.DeleteStationAsync(SelectedStation.Id);
+
+                StatusMessage = $"Custom station '{SelectedStation.Name}' deleted";
+
+                // Reload custom stations
+                await LoadCustomStationsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error deleting custom station: {ex.Message}";
         }
     }
 
