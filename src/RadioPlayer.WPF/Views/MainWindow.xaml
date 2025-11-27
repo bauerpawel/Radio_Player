@@ -393,6 +393,58 @@
                                 <materialDesign:PackIcon Kind="Star" Width="24" Height="24"/>
                             </materialDesign:ToggleButtonAssist.OnContent>
                         </ToggleButton>
+
+                        <!-- Recording Controls -->
+                        <Separator Style="{StaticResource MaterialDesignSeparator}"
+                                  Margin="16,0"
+                                  Orientation="Vertical"
+                                  Height="40"/>
+
+                        <Button Style="{StaticResource MaterialDesignIconButton}"
+                                Command="{Binding StartRecordingCommand}"
+                                Width="40" Height="40"
+                                Margin="0,0,12,0"
+                                ToolTip="Start Recording"
+                                Visibility="{Binding IsRecording, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                            <materialDesign:PackIcon Kind="Record" Width="24" Height="24" Foreground="#F44336"/>
+                        </Button>
+
+                        <Button Style="{StaticResource MaterialDesignIconButton}"
+                                Command="{Binding StopRecordingCommand}"
+                                Width="40" Height="40"
+                                Margin="0,0,12,0"
+                                ToolTip="Stop Recording"
+                                Visibility="{Binding IsRecording, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <StackPanel>
+                                <materialDesign:PackIcon Kind="Stop" Width="24" Height="24" Foreground="#F44336"/>
+                                <Ellipse Width="8" Height="8" Fill="#F44336" HorizontalAlignment="Center" Margin="0,-4,0,0">
+                                    <Ellipse.Triggers>
+                                        <EventTrigger RoutedEvent="Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                   From="1.0" To="0.0" Duration="0:0:0.8"
+                                                                   RepeatBehavior="Forever" AutoReverse="True"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Ellipse.Triggers>
+                                </Ellipse>
+                            </StackPanel>
+                        </Button>
+
+                        <StackPanel Orientation="Vertical" VerticalAlignment="Center"
+                                   Visibility="{Binding IsRecording, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Text="REC"
+                                      FontSize="10"
+                                      FontWeight="Bold"
+                                      Foreground="#F44336"
+                                      HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding RecordingDuration}"
+                                      FontSize="11"
+                                      FontFamily="Consolas"
+                                      HorizontalAlignment="Center"/>
+                        </StackPanel>
                     </StackPanel>
 
                     <!-- Status Display -->

@@ -135,4 +135,36 @@ public static class AppConstants
                 "RadioPlayer",
                 LogFileName);
     }
+
+    // Recording configuration
+    public static class Recording
+    {
+        /// <summary>
+        /// Default recording output directory
+        /// </summary>
+        public static string DefaultOutputDirectory =>
+            System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyMusic),
+                "Radio Recordings");
+
+        /// <summary>
+        /// Default recording format (WAV or MP3)
+        /// </summary>
+        public static Services.RecordingFormat DefaultFormat = Services.RecordingFormat.Wav;
+
+        /// <summary>
+        /// MP3 bitrate for encoding (in bps)
+        /// </summary>
+        public const int Mp3Bitrate = 128000; // 128 kbps
+
+        /// <summary>
+        /// Include timestamp in filename
+        /// </summary>
+        public static bool IncludeTimestampInFilename = true;
+
+        /// <summary>
+        /// Include station name in filename
+        /// </summary>
+        public static bool IncludeStationNameInFilename = true;
+    }
 }
