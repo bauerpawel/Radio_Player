@@ -8,9 +8,9 @@
         mc:Ignorable="d"
         Title="{helpers:Translate MainWindow.Title}"
         Height="800"
-        Width="1100"
+        Width="1280"
         MinHeight="700"
-        MinWidth="900"
+        MinWidth="1100"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource MaterialDesignPaper}"
         FontFamily="{DynamicResource MaterialDesignFont}"
@@ -82,7 +82,7 @@
             <!-- Main Content Area -->
             <Grid Grid.Row="1" Margin="16">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="280"/>
+                    <ColumnDefinition Width="320"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
@@ -325,7 +325,7 @@
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
 
-                                    <GridViewColumn Header="{helpers:Translate StationList.Headers.Actions}" Width="90">
+                                    <GridViewColumn Header="{helpers:Translate StationList.Headers.Actions}" Width="130">
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <Button Style="{StaticResource MaterialDesignOutlinedButton}"
