@@ -25,14 +25,19 @@ This document provides comprehensive guidance for AI assistants working with the
 
 ### Core Features
 - Multi-format audio streaming (MP3, AAC, OGG/Vorbis, OGG/Opus, OGG/FLAC)
+- Stream recording to WAV/MP3 with ICY metadata tagging
 - Station browsing, search, and favorites management
+- Custom station support - add your own radio stations
+- Backup/Export and Import of settings and favorites
 - ICY metadata parsing for "Now Playing" information
 - Listening history tracking
+- Multi-language interface (English, German, Polish)
 - Material Design UI with system tray support
 
 ### Key Statistics
-- **Lines of Code**: ~5,500 lines
-- **Files**: 50+ files
+- **Version**: 1.2
+- **Lines of Code**: ~7,700 lines
+- **Files**: 44 C# files, 7 XAML views
 - **Framework**: .NET 10 (WPF)
 - **Architecture**: MVVM with Dependency Injection
 - **Database**: SQLite with ADO.NET
@@ -100,7 +105,8 @@ Radio_Player/
     │   ├── Favorite.cs               # Favorite station entity
     │   ├── ListeningHistory.cs       # Listening history entry
     │   ├── IcyMetadata.cs            # ICY/Shoutcast metadata
-    │   └── StreamProgress.cs         # Streaming progress info
+    │   ├── StreamProgress.cs         # Streaming progress info
+    │   └── BackupData.cs             # Backup/export data structure
     │
     ├── ViewModels/                    # MVVM ViewModels
     │   └── MainViewModel.cs          # Main window ViewModel (single VM)
@@ -111,15 +117,20 @@ Radio_Player/
     │   ├── StationDetailsDialog.xaml(.cs) # Station details viewer
     │   ├── HistoryDialog.xaml(.cs)   # Listening history viewer
     │   ├── StreamInfoDialog.xaml(.cs) # Stream debug info
+    │   ├── AddCustomStationDialog.xaml(.cs) # Add custom station dialog
     │   └── AboutDialog.xaml(.cs)     # About dialog
     │
     ├── Services/                      # Business logic and data access
     │   ├── IRadioPlayer.cs           # Radio player interface
     │   ├── NAudioRadioPlayer.cs      # NAudio-based player implementation
+    │   ├── IRadioRecorder.cs         # Radio recorder interface
+    │   ├── NAudioRadioRecorder.cs    # Stream recorder implementation
     │   ├── IRadioBrowserService.cs   # Radio Browser API interface
     │   ├── RadioBrowserService.cs    # Radio Browser API client
     │   ├── IRadioStationRepository.cs # Repository interface
     │   ├── RadioStationRepository.cs # SQLite database operations (ADO.NET)
+    │   ├── IExportImportService.cs   # Backup/export service interface
+    │   ├── ExportImportService.cs    # Backup/export implementation
     │   └── DTOs/                     # Data transfer objects
     │       ├── RadioStationDto.cs    # Station DTO from API
     │       ├── CountryDto.cs         # Country DTO
@@ -145,6 +156,11 @@ Radio_Player/
     │   ├── app.ico                   # Application icon
     │   ├── README_ICON.md            # Icon documentation
     │   └── ICON_DOWNLOAD_INSTRUCTIONS.md
+    │
+    ├── lang/                          # Translation files for i18n
+    │   ├── en.json                   # English translations
+    │   ├── de.json                   # German translations
+    │   └── pl.json                   # Polish translations
     │
     ├── App.xaml(.cs)                 # Application entry point and DI setup
     └── RadioPlayer.WPF.csproj        # Project file with dependencies
@@ -493,9 +509,191 @@ await repository.AddListeningHistoryAsync(stationUuid, duration);
 
 **Resilience:** Polly retry policy (5 attempts, exponential backoff)
 
-### 4. Configuration (`AppConstants.cs`)
+### 4. Stream Recording (`NAudioRadioRecorder.cs`)
 
-**CRITICAL FILE** - All configuration constants are defined here.
+**NEW in v1.2** - Record radio streams to audio files.
+
+**Supported Formats:**
+- **WAV**: Uncompressed PCM audio (lossless)
+- **MP3**: MPEG-1 Audio Layer 3 (compressed, requires LAME encoder)
+
+**Architecture:**
+- Captures audio from the player's BufferedWaveProvider
+- Real-time recording with metadata tracking
+- Automatic filename generation with station name and timestamp
+- ICY metadata embedding in MP3 files (ID3 tags)
+
+**Interface:** `IRadioRecorder`
+
+```csharp
+public interface IRadioRecorder : IDisposable
+{
+    bool IsRecording { get; }
+    TimeSpan RecordingDuration { get; }
+    string? CurrentRecordingPath { get; }
+
+    event EventHandler<string>? RecordingStarted;
+    event EventHandler<RecordingResult>? RecordingStopped;
+    event EventHandler<Exception>? RecordingError;
+
+    Task StartRecordingAsync(RadioStation station, string outputPath, RecordingFormat format);
+    Task<RecordingResult> StopRecordingAsync();
+    void UpdateMetadata(IcyMetadata metadata);
+}
+```
+
+**Key Features:**
+- User-selectable output location (SaveFileDialog)
+- Real-time duration tracking
+- Metadata tagging (Artist, Title, Album from ICY metadata)
+- Error handling with user notifications
+- Clean disposal and file finalization
+
+**Integration:**
+```csharp
+// In DI container (App.xaml.cs)
+services.AddSingleton<IRadioRecorder, NAudioRadioRecorder>();
+
+// In ViewModel
+await _radioRecorder.StartRecordingAsync(currentStation, filePath, RecordingFormat.Mp3);
+// ... recording in progress ...
+var result = await _radioRecorder.StopRecordingAsync();
+```
+
+### 5. Custom Stations (`AddCustomStationDialog`)
+
+**NEW in v1.2** - Users can add their own radio stations.
+
+**Features:**
+- Manual station entry with custom metadata
+- Support for all streaming formats (MP3, AAC, OGG, etc.)
+- Custom logo/favicon URLs
+- Full integration with favorites and history
+- Backup/export support
+
+**Required Fields:**
+- Station name
+- Stream URL (UrlResolved)
+- Codec (MP3, AAC, OGG/Vorbis, etc.)
+
+**Optional Fields:**
+- Bitrate, Country, Language, Tags
+- Homepage, Favicon
+- Country code (ISO 3166-1 alpha-2)
+
+**Storage:**
+- Custom stations stored in `RadioStations` table with `IsCustom = true`
+- Unique UUID generated for each custom station
+- Can be added to favorites like regular stations
+
+**Repository Methods:**
+```csharp
+Task<bool> AddCustomStationAsync(RadioStation station);
+Task<List<RadioStation>> GetCustomStationsAsync();
+Task<bool> DeleteCustomStationAsync(string stationUuid);
+```
+
+### 6. Backup & Export/Import (`ExportImportService`)
+
+**NEW in v1.2** - Backup and restore settings, favorites, and custom stations.
+
+**Interface:** `IExportImportService`
+
+```csharp
+public interface IExportImportService
+{
+    Task ExportToJsonAsync(string filePath, bool includeCustomStations = true);
+    Task ImportFromJsonAsync(string filePath, bool mergeWithExisting = true);
+    Task<BackupData> GetBackupDataAsync(bool includeCustomStations = true);
+    Task<bool> ValidateBackupFileAsync(string filePath);
+}
+```
+
+**Backup Format:** JSON (human-readable)
+
+**Backup Contents:**
+```csharp
+public class BackupData
+{
+    string Version { get; set; }                      // Format version (1.0)
+    DateTime ExportDate { get; set; }                 // UTC timestamp
+    BackupSettings Settings { get; set; }             // App settings
+    List<BackupFavorite> Favorites { get; set; }      // Favorite stations
+    List<BackupStation> CustomStations { get; set; }  // User-added stations
+}
+```
+
+**Settings Included:**
+- Debug logging enabled/disabled
+- Minimize to tray preference
+- Buffer duration and pre-buffer duration
+- Language preference
+- Volume level
+
+**Import Modes:**
+- **Merge**: Combine with existing data (default)
+- **Replace**: Replace all settings and favorites
+
+**Validation:**
+- JSON schema validation
+- Version compatibility check
+- Station UUID validation
+- URL validation for custom stations
+
+**Use Cases:**
+- Backup before system migration
+- Share favorites between computers
+- Restore after reinstall
+- Preserve custom station lists
+
+### 7. Multi-Language Support (i18n)
+
+**NEW in v1.2** - Interface supports multiple languages.
+
+**Supported Languages:**
+- **English** (en.json) - Default
+- **German** (de.json) - Deutsch
+- **Polish** (pl.json) - Polski
+
+**Architecture:**
+- JSON-based translation files in `lang/` directory
+- Runtime language switching without restart
+- All UI strings externalized
+- Dialogs, menus, buttons, and messages translated
+
+**Translation File Structure:**
+```json
+{
+  "AppName": "Radio Player",
+  "Version": "Version 1.2",
+  "MainWindow": { "Title": "...", "..." },
+  "Browse": { "TopStations": "...", "Favorites": "...", "..." },
+  "Search": { "Placeholder": "...", "..." },
+  "Player": { "Play": "...", "Stop": "...", "..." },
+  "Recording": { "StartRecording": "...", "..." }
+}
+```
+
+**Language Loading:**
+- Language selection in Settings dialog
+- Preference stored in database (Settings table)
+- Loaded on application startup
+- Fallback to English if translation missing
+
+**Adding New Languages:**
+1. Create new JSON file: `lang/xx.json` (ISO 639-1 code)
+2. Copy structure from `en.json`
+3. Translate all strings
+4. Add language option to Settings dialog
+5. Test all dialogs and UI elements
+
+**Best Practices:**
+- Use placeholders for dynamic content: `{0}`, `{1}`, etc.
+- Keep translations concise for UI space constraints
+- Test with longest language (often German) for layout
+- Update all language files when adding new strings
+
+### 8. Configuration (`AppConstants.cs`)
 
 **Structure:**
 ```csharp
@@ -567,6 +765,43 @@ public static class AppConstants
    - [ ] Offline stations show error
    - [ ] Network errors retry automatically
    - [ ] Database errors show user-friendly messages
+
+7. **Recording (v1.2)**
+   - [ ] Start recording to MP3 works
+   - [ ] Start recording to WAV works
+   - [ ] Recording duration updates in real-time
+   - [ ] Recording stops cleanly
+   - [ ] Metadata embedded in MP3 files (ID3 tags)
+   - [ ] Cannot start second recording while one is active
+   - [ ] Recording stops automatically when playback stops
+
+8. **Custom Stations (v1.2)**
+   - [ ] Add custom station dialog works
+   - [ ] Required fields validated (name, URL, codec)
+   - [ ] Custom station appears in list
+   - [ ] Custom station plays correctly
+   - [ ] Can add custom station to favorites
+   - [ ] Can delete custom station
+   - [ ] Custom stations included in backup/export
+
+9. **Backup/Export/Import (v1.2)**
+   - [ ] Export creates valid JSON file
+   - [ ] Export includes favorites
+   - [ ] Export includes custom stations
+   - [ ] Export includes settings
+   - [ ] Import validates backup file
+   - [ ] Import merge mode works (preserves existing)
+   - [ ] Import replace mode works (clears existing)
+   - [ ] Import handles invalid files gracefully
+
+10. **Multi-Language (v1.2)**
+    - [ ] English UI displays correctly
+    - [ ] German UI displays correctly
+    - [ ] Polish UI displays correctly
+    - [ ] Language switching works without restart
+    - [ ] All dialogs translated
+    - [ ] Settings persist language choice
+    - [ ] Fallback to English for missing translations
 
 ### Recommended Test Stations
 
@@ -687,6 +922,250 @@ public static class AppConstants
    <Button Command="{Binding PlayCommand}" />
    ```
 
+### Working with Recording
+
+**Adding Recording to UI:**
+
+1. **Check if recording is active**
+   ```csharp
+   bool canRecord = _radioPlayer.IsPlaying && !_radioRecorder.IsRecording;
+   ```
+
+2. **Start recording**
+   ```csharp
+   var saveDialog = new SaveFileDialog
+   {
+       Filter = "MP3 Files (*.mp3)|*.mp3|WAV Files (*.wav)|*.wav",
+       FileName = $"{station.Name}_{DateTime.Now:yyyyMMdd_HHmmss}"
+   };
+
+   if (saveDialog.ShowDialog() == true)
+   {
+       var format = saveDialog.FilterIndex == 1 ? RecordingFormat.Mp3 : RecordingFormat.Wav;
+       await _radioRecorder.StartRecordingAsync(station, saveDialog.FileName, format);
+   }
+   ```
+
+3. **Stop recording**
+   ```csharp
+   var result = await _radioRecorder.StopRecordingAsync();
+   MessageBox.Show($"Recording saved: {result.FilePath}\nDuration: {result.Duration:hh\\:mm\\:ss}");
+   ```
+
+4. **Subscribe to events**
+   ```csharp
+   _radioRecorder.RecordingStarted += (s, path) =>
+       StatusMessage = $"Recording to: {path}";
+   _radioRecorder.RecordingStopped += (s, result) =>
+       StatusMessage = $"Recording stopped ({result.Duration:hh\\:mm\\:ss})";
+   _radioRecorder.RecordingError += (s, ex) =>
+       MessageBox.Show($"Recording error: {ex.Message}");
+   ```
+
+**Important Notes:**
+- MP3 recording requires LAME encoder (handled by NAudio)
+- WAV files are larger but lossless
+- Metadata updates automatically during recording
+- Stop recording before switching stations or closing app
+
+### Working with Custom Stations
+
+**Adding a Custom Station:**
+
+1. **Show AddCustomStationDialog**
+   ```csharp
+   var dialog = new AddCustomStationDialog();
+   if (dialog.ShowDialog() == true)
+   {
+       var customStation = dialog.CustomStation;
+       await _repository.AddCustomStationAsync(customStation);
+       await LoadCustomStationsAsync();
+   }
+   ```
+
+2. **Validate Custom Station Input**
+   ```csharp
+   if (string.IsNullOrWhiteSpace(Name) ||
+       string.IsNullOrWhiteSpace(UrlResolved) ||
+       string.IsNullOrWhiteSpace(Codec))
+   {
+       MessageBox.Show("Name, URL, and Codec are required");
+       return false;
+   }
+
+   // Validate URL format
+   if (!Uri.TryCreate(UrlResolved, UriKind.Absolute, out var uri))
+   {
+       MessageBox.Show("Invalid URL format");
+       return false;
+   }
+   ```
+
+3. **Generate UUID for Custom Station**
+   ```csharp
+   var customStation = new RadioStation
+   {
+       StationUuid = Guid.NewGuid().ToString(),
+       Name = name,
+       UrlResolved = url,
+       Codec = codec,
+       IsCustom = true,
+       // ... other fields
+   };
+   ```
+
+4. **Delete Custom Station**
+   ```csharp
+   if (MessageBox.Show($"Delete '{station.Name}'?",
+                       "Confirm Delete",
+                       MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+   {
+       await _repository.DeleteCustomStationAsync(station.StationUuid);
+       await LoadCustomStationsAsync();
+   }
+   ```
+
+**Important Notes:**
+- Custom stations are marked with `IsCustom = true`
+- Can be added to favorites like regular stations
+- Included in backup/export operations
+- Test streaming URL before adding
+
+### Working with Backup/Export/Import
+
+**Exporting Data:**
+
+1. **Export with SaveFileDialog**
+   ```csharp
+   var saveDialog = new SaveFileDialog
+   {
+       Filter = "JSON Files (*.json)|*.json|All Files (*.*)|*.*",
+       FileName = $"RadioPlayer_Backup_{DateTime.Now:yyyyMMdd}.json"
+   };
+
+   if (saveDialog.ShowDialog() == true)
+   {
+       await _exportImportService.ExportToJsonAsync(saveDialog.FileName,
+                                                     includeCustomStations: true);
+       MessageBox.Show("Backup created successfully!");
+   }
+   ```
+
+2. **Preview Backup Data**
+   ```csharp
+   var backupData = await _exportImportService.GetBackupDataAsync(includeCustomStations: true);
+   var summary = $"Favorites: {backupData.Favorites.Count}\n" +
+                 $"Custom Stations: {backupData.CustomStations.Count}\n" +
+                 $"Settings: Buffer {backupData.Settings.BufferDurationSeconds}s";
+   MessageBox.Show(summary, "Backup Preview");
+   ```
+
+**Importing Data:**
+
+1. **Import with OpenFileDialog**
+   ```csharp
+   var openDialog = new OpenFileDialog
+   {
+       Filter = "JSON Files (*.json)|*.json|All Files (*.*)|*.*"
+   };
+
+   if (openDialog.ShowDialog() == true)
+   {
+       // Validate first
+       if (!await _exportImportService.ValidateBackupFileAsync(openDialog.FileName))
+       {
+           MessageBox.Show("Invalid backup file!");
+           return;
+       }
+
+       // Ask merge or replace
+       var result = MessageBox.Show("Merge with existing data?",
+                                    "Import Options",
+                                    MessageBoxButton.YesNoCancel);
+       if (result == MessageBoxResult.Cancel) return;
+
+       bool mergeWithExisting = result == MessageBoxResult.Yes;
+       await _exportImportService.ImportFromJsonAsync(openDialog.FileName, mergeWithExisting);
+
+       MessageBox.Show("Import completed successfully!");
+       await ReloadAllDataAsync();
+   }
+   ```
+
+2. **Handle Import Errors**
+   ```csharp
+   try
+   {
+       await _exportImportService.ImportFromJsonAsync(filePath, merge);
+   }
+   catch (JsonException ex)
+   {
+       MessageBox.Show($"Invalid JSON format: {ex.Message}");
+   }
+   catch (Exception ex)
+   {
+       MessageBox.Show($"Import failed: {ex.Message}");
+   }
+   ```
+
+**Important Notes:**
+- Backup files are human-readable JSON
+- Import validates file format and version
+- Merge mode preserves existing favorites
+- Replace mode clears existing data first
+- Custom stations are optional in backup
+
+### Adding New Translations
+
+**Steps to Add a New Language:**
+
+1. **Create Translation File**
+   ```bash
+   # Copy English template
+   cp src/RadioPlayer.WPF/lang/en.json src/RadioPlayer.WPF/lang/xx.json
+   ```
+
+2. **Translate All Strings**
+   - Open `xx.json` in text editor
+   - Translate all string values (preserve keys)
+   - Use appropriate placeholder syntax: `{0}`, `{1}`, etc.
+   - Test special characters and encoding (UTF-8)
+
+3. **Add to Settings Dialog**
+   ```csharp
+   // In SettingsDialog.xaml.cs or ViewModel
+   var languages = new[]
+   {
+       new { Code = "en", Name = "English" },
+       new { Code = "de", Name = "Deutsch" },
+       new { Code = "pl", Name = "Polski" },
+       new { Code = "xx", Name = "Your Language" }  // Add new language
+   };
+   ```
+
+4. **Update .csproj (if needed)**
+   - Translation files should auto-copy with existing glob pattern:
+   ```xml
+   <ItemGroup>
+     <None Include="lang\*.json">
+       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+     </None>
+   </ItemGroup>
+   ```
+
+5. **Test Translation**
+   - Run app and switch to new language in Settings
+   - Check all dialogs and UI elements
+   - Verify text fits in UI controls (adjust XAML if needed)
+   - Test dynamic strings with placeholders
+
+**Translation Best Practices:**
+- Keep button text short (fits in small buttons)
+- Use formal/informal tone consistently
+- Preserve technical terms (MP3, AAC, UUID, etc.)
+- Test RTL languages carefully (may need layout changes)
+- Include context comments for translators
+
 ---
 
 ## Important Considerations
@@ -802,9 +1281,12 @@ public static class AppConstants
 
 - **AppConstants.cs** - All configuration values
 - **NAudioRadioPlayer.cs** - Audio streaming logic
+- **NAudioRadioRecorder.cs** - Stream recording logic (v1.2)
 - **RadioStationRepository.cs** - Database operations
 - **RadioBrowserService.cs** - API integration
+- **ExportImportService.cs** - Backup/export operations (v1.2)
 - **MainViewModel.cs** - UI logic and commands
+- **lang/*.json** - Translation files for multi-language support (v1.2)
 
 ### Common Pitfalls to Avoid
 
@@ -829,8 +1311,41 @@ public static class AppConstants
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** 2025-11-26
+## Version History
+
+### Version 1.2 (2025-11-28)
+**Major Features Added:**
+- Stream recording to WAV/MP3 with ICY metadata tagging
+- Custom station support - add your own radio stations
+- Backup/Export and Import of settings, favorites, and custom stations
+- Multi-language interface (English, German, Polish)
+- Enhanced UI with translation support across all dialogs
+
+**New Components:**
+- `NAudioRadioRecorder.cs` - Stream recording service
+- `ExportImportService.cs` - Backup/export service
+- `AddCustomStationDialog.xaml` - Custom station entry
+- `BackupData.cs` - Backup data model
+- `lang/*.json` - Translation files
+
+**Statistics:**
+- Lines of Code: ~7,700 (up from ~5,500)
+- Total Files: 44 C# files, 7 XAML views
+- New features: 4 major features added
+- Languages: 3 supported languages
+
+### Version 1.0 (2025-11-26)
+**Initial comprehensive documentation:**
+- Project overview and architecture
+- Technology stack and dependencies
+- Development workflows
+- Code conventions and patterns
+- Testing guidelines
+
+---
+
+**Document Version:** 1.2
+**Last Updated:** 2025-11-28
 **Maintained By:** Radio Player Development Team
 
 For questions or clarifications, refer to the README.md or examine the source code directly.
