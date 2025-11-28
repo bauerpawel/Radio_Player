@@ -6,11 +6,10 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
-    <!-- Application icon - see Resources/ICON_DOWNLOAD_INSTRUCTIONS.md for download instructions -->
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <AssemblyName>RadioPlayer</AssemblyName>
     <RootNamespace>RadioPlayer.WPF</RootNamespace>
-    <Version>1.0.0</Version>
+    <Version>1.2.0</Version>
     <Authors>Radio Player Team</Authors>
     <Company>Radio Player</Company>
     <Product>Radio Player</Product>
