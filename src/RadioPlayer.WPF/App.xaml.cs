@@ -76,6 +76,31 @@ public partial class App : Application
                     MessageBoxImage.Warning);
             }
 
+            // Update station cache in background
+            try
+            {
+                var cacheService = _serviceProvider.GetRequiredService<IStationCacheService>();
+
+                // Run cache update in background without blocking startup
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await cacheService.UpdateCacheIfNeededAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Cache update failed: {ex.Message}");
+                        // Fail silently - app will work without cache
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to start cache service: {ex.Message}");
+                // Continue without cache service
+            }
+
             // Create and show main window
             var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
@@ -109,6 +134,7 @@ public partial class App : Application
         services.AddSingleton<IPlaylistParserService, PlaylistParserService>();
         services.AddSingleton<IStreamValidationService, StreamValidationService>();
         services.AddSingleton<IExportImportService, ExportImportService>();
+        services.AddSingleton<IStationCacheService, StationCacheService>();
 
         // Register ViewModels
         services.AddTransient<MainViewModel>();

@@ -24,6 +24,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ILanguageService? _languageService;
     private readonly IStreamValidationService? _streamValidationService;
     private readonly IExportImportService? _exportImportService;
+    private readonly IStationCacheService? _stationCacheService;
 
     [ObservableProperty]
     private ObservableCollection<RadioStation> _stations = new();
@@ -109,7 +110,8 @@ public partial class MainViewModel : ObservableObject
         IRadioRecorder radioRecorder,
         ILanguageService languageService,
         IStreamValidationService streamValidationService,
-        IExportImportService exportImportService)
+        IExportImportService exportImportService,
+        IStationCacheService stationCacheService)
     {
         _radioBrowserService = radioBrowserService;
         _repository = repository;
@@ -118,6 +120,7 @@ public partial class MainViewModel : ObservableObject
         _languageService = languageService;
         _streamValidationService = streamValidationService;
         _exportImportService = exportImportService;
+        _stationCacheService = stationCacheService;
 
         // Subscribe to player events
         if (_radioPlayer != null)
@@ -142,8 +145,19 @@ public partial class MainViewModel : ObservableObject
             _languageService.LanguageChanged += OnLanguageChanged;
         }
 
+        // Subscribe to cache service events
+        if (_stationCacheService != null)
+        {
+            _stationCacheService.CacheUpdateStarted += OnCacheUpdateStarted;
+            _stationCacheService.CacheUpdateCompleted += OnCacheUpdateCompleted;
+            _stationCacheService.CacheUpdateFailed += OnCacheUpdateFailed;
+        }
+
         // Load available countries for the filter
         _ = LoadAvailableCountriesAsync();
+
+        // Load cached stations on startup
+        _ = LoadCachedStationsAsync();
     }
 
     /// <summary>
@@ -186,6 +200,41 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task LoadCachedStationsAsync()
+    {
+        if (_repository == null) return;
+
+        try
+        {
+            StatusMessage = "Loading cached stations...";
+
+            var cachedStations = await _repository.GetCachedStationsAsync(limit: 100);
+
+            if (cachedStations.Count > 0)
+            {
+                await UpdateFavoriteStatusAsync(cachedStations);
+                Stations = new ObservableCollection<RadioStation>(cachedStations);
+                UpdateCurrentlyPlayingStationReference();
+
+                // Get cache age to show in status
+                var cacheAge = await _stationCacheService?.GetCacheAgeAsync()!;
+                var ageText = cacheAge.HasValue
+                    ? $"(cached {FormatCacheAge(cacheAge.Value)} ago)"
+                    : "";
+                StatusMessage = $"Loaded {cachedStations.Count} cached stations {ageText}";
+            }
+            else
+            {
+                StatusMessage = "No cached stations available";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error loading cached stations: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
     private async Task LoadTopStationsAsync()
     {
         if (_radioBrowserService == null) return;
@@ -208,6 +257,12 @@ public partial class MainViewModel : ObservableObject
                     codec: NormalizeFilter(CodecFilter),
                     limit: 100);
 
+                // Cache the results
+                if (_repository != null && stations.Count > 0)
+                {
+                    await _repository.BulkAddOrUpdateStationsAsync(stations);
+                }
+
                 await UpdateFavoriteStatusAsync(stations);
                 Stations = new ObservableCollection<RadioStation>(stations);
                 UpdateCurrentlyPlayingStationReference();
@@ -216,6 +271,13 @@ public partial class MainViewModel : ObservableObject
             else
             {
                 var stations = await _radioBrowserService.GetTopVotedStationsAsync(limit: 100);
+
+                // Cache the results
+                if (_repository != null && stations.Count > 0)
+                {
+                    await _repository.BulkAddOrUpdateStationsAsync(stations);
+                }
+
                 await UpdateFavoriteStatusAsync(stations);
                 Stations = new ObservableCollection<RadioStation>(stations);
                 UpdateCurrentlyPlayingStationReference();
@@ -226,6 +288,38 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = $"Error loading stations: {ex.Message}";
         }
+    }
+
+    [RelayCommand]
+    private async Task RefreshCacheAsync()
+    {
+        if (_stationCacheService == null) return;
+
+        try
+        {
+            StatusMessage = "Refreshing station cache...";
+            var count = await _stationCacheService.UpdateCacheAsync();
+            StatusMessage = $"Cache refreshed: {count} stations";
+
+            // Reload cached stations
+            await LoadCachedStationsAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error refreshing cache: {ex.Message}";
+        }
+    }
+
+    private string FormatCacheAge(TimeSpan age)
+    {
+        if (age.TotalMinutes < 1)
+            return "moments";
+        else if (age.TotalHours < 1)
+            return $"{(int)age.TotalMinutes} min";
+        else if (age.TotalDays < 1)
+            return $"{(int)age.TotalHours} hr";
+        else
+            return $"{(int)age.TotalDays} day{(age.TotalDays >= 2 ? "s" : "")}";
     }
 
     [RelayCommand]
@@ -254,6 +348,12 @@ public partial class MainViewModel : ObservableObject
                 tag: NormalizeFilter(GenreFilter),
                 codec: NormalizeFilter(CodecFilter),
                 limit: 100);
+
+            // Cache the search results
+            if (_repository != null && stations.Count > 0)
+            {
+                await _repository.BulkAddOrUpdateStationsAsync(stations);
+            }
 
             // Update favorite status for stations that exist in local database
             await UpdateFavoriteStatusAsync(stations);
@@ -527,6 +627,37 @@ public partial class MainViewModel : ObservableObject
     partial void OnIsBufferingChanged(bool value)
     {
         CanStop = IsPlaying || IsBuffering;
+    }
+
+    // Event handlers for StationCacheService events
+    private void OnCacheUpdateStarted(object? sender, EventArgs e)
+    {
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            StatusMessage = "Updating station cache...";
+        });
+    }
+
+    private void OnCacheUpdateCompleted(object? sender, int stationCount)
+    {
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            StatusMessage = $"Cache updated: {stationCount} stations";
+
+            // Reload cached stations if we're showing them
+            if (Stations.Count == 0 || !string.IsNullOrWhiteSpace(SearchText))
+            {
+                _ = LoadCachedStationsAsync();
+            }
+        });
+    }
+
+    private void OnCacheUpdateFailed(object? sender, Exception ex)
+    {
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            StatusMessage = $"Cache update failed: {ex.Message}";
+        });
     }
 
     [RelayCommand]

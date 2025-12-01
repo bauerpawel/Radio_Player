@@ -67,6 +67,7 @@ public class RadioStationRepository : IRadioStationRepository
         checkCommand.CommandText = "PRAGMA table_info(RadioStations)";
 
         bool hasIsCustomColumn = false;
+        bool hasCachedDateColumn = false;
         using (var reader = checkCommand.ExecuteReader())
         {
             while (reader.Read())
@@ -75,7 +76,10 @@ public class RadioStationRepository : IRadioStationRepository
                 if (columnName == "IsCustom")
                 {
                     hasIsCustomColumn = true;
-                    break;
+                }
+                else if (columnName == "CachedDate")
+                {
+                    hasCachedDateColumn = true;
                 }
             }
         }
@@ -84,6 +88,13 @@ public class RadioStationRepository : IRadioStationRepository
         {
             using var alterCommand = connection.CreateCommand();
             alterCommand.CommandText = "ALTER TABLE RadioStations ADD COLUMN IsCustom INTEGER DEFAULT 0";
+            alterCommand.ExecuteNonQuery();
+        }
+
+        if (!hasCachedDateColumn)
+        {
+            using var alterCommand = connection.CreateCommand();
+            alterCommand.CommandText = "ALTER TABLE RadioStations ADD COLUMN CachedDate TEXT";
             alterCommand.ExecuteNonQuery();
         }
     }
@@ -106,7 +117,8 @@ public class RadioStationRepository : IRadioStationRepository
                 Homepage TEXT,
                 IsActive INTEGER DEFAULT 1,
                 IsCustom INTEGER DEFAULT 0,
-                DateAdded TEXT DEFAULT CURRENT_TIMESTAMP
+                DateAdded TEXT DEFAULT CURRENT_TIMESTAMP,
+                CachedDate TEXT
             );
 
             CREATE INDEX IF NOT EXISTS idx_stations_name ON RadioStations(Name);
@@ -682,6 +694,126 @@ public class RadioStationRepository : IRadioStationRepository
 
             command.ExecuteNonQuery();
         });
+    }
+
+    #endregion
+
+    #region Station Caching
+
+    public async Task BulkAddOrUpdateStationsAsync(IEnumerable<RadioStation> stations)
+    {
+        await Task.Run(() =>
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            using var transaction = connection.BeginTransaction();
+
+            try
+            {
+                foreach (var station in stations)
+                {
+                    using var command = connection.CreateCommand();
+                    command.Transaction = transaction;
+                    command.CommandText = @"
+                        INSERT INTO RadioStations
+                        (StationUuid, Name, StreamUrl, Genre, Country, CountryCode, Language,
+                         Bitrate, Codec, LogoUrl, Homepage, IsActive, IsCustom, DateAdded, CachedDate)
+                        VALUES
+                        (@StationUuid, @Name, @StreamUrl, @Genre, @Country, @CountryCode, @Language,
+                         @Bitrate, @Codec, @LogoUrl, @Homepage, @IsActive, @IsCustom, @DateAdded, @CachedDate)
+                        ON CONFLICT(StationUuid) DO UPDATE SET
+                            Name = @Name,
+                            StreamUrl = @StreamUrl,
+                            Genre = @Genre,
+                            Country = @Country,
+                            CountryCode = @CountryCode,
+                            Language = @Language,
+                            Bitrate = @Bitrate,
+                            Codec = @Codec,
+                            LogoUrl = @LogoUrl,
+                            Homepage = @Homepage,
+                            IsActive = @IsActive,
+                            CachedDate = @CachedDate
+                        WHERE IsCustom = 0";
+
+                    AddStationParameters(command, station);
+                    command.Parameters.AddWithValue("@CachedDate", DateTime.UtcNow.ToString("o"));
+
+                    command.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        });
+    }
+
+    public async Task<List<RadioStation>> GetCachedStationsAsync(int limit = 100, bool excludeCustom = true)
+    {
+        return await Task.Run(() =>
+        {
+            var stations = new List<RadioStation>();
+
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            using var command = connection.CreateCommand();
+
+            var whereClause = excludeCustom ? "WHERE IsActive = 1 AND IsCustom = 0 AND CachedDate IS NOT NULL" : "WHERE IsActive = 1 AND CachedDate IS NOT NULL";
+
+            command.CommandText = $@"
+                SELECT Id, StationUuid, Name, StreamUrl, Genre, Country, CountryCode,
+                       Language, Bitrate, Codec, LogoUrl, Homepage, IsActive, IsCustom, DateAdded
+                FROM RadioStations
+                {whereClause}
+                ORDER BY CachedDate DESC, Name
+                LIMIT @Limit";
+
+            command.Parameters.AddWithValue("@Limit", limit);
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                stations.Add(MapReaderToStation(reader));
+            }
+
+            return stations;
+        });
+    }
+
+    public async Task<DateTime?> GetLastCacheUpdateAsync()
+    {
+        var lastUpdate = await GetSettingAsync("LastCacheUpdate");
+        if (lastUpdate != null && DateTime.TryParse(lastUpdate, out var dateTime))
+        {
+            return dateTime;
+        }
+        return null;
+    }
+
+    public async Task UpdateCacheTimestampAsync()
+    {
+        await SetSettingAsync("LastCacheUpdate", DateTime.UtcNow.ToString("o"));
+    }
+
+    public async Task ClearStationCacheAsync()
+    {
+        await Task.Run(() =>
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+
+            using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM RadioStations WHERE IsCustom = 0";
+            command.ExecuteNonQuery();
+        });
+
+        await SetSettingAsync("LastCacheUpdate", string.Empty);
     }
 
     #endregion
