@@ -497,6 +497,27 @@
                                       TextTrimming="CharacterEllipsis"
                                       Visibility="{Binding NowPlaying, Converter={StaticResource NullToVisibilityConverter}}"/>
 
+                            <!-- Playback Time -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,4,0,0">
+                                <materialDesign:PackIcon Kind="Clock"
+                                                        Width="14" Height="14"
+                                                        VerticalAlignment="Center"
+                                                        Margin="0,0,6,0"
+                                                        Opacity="0.6"/>
+                                <TextBlock Text="{Binding PlaybackDuration}"
+                                          FontSize="11"
+                                          FontFamily="Consolas"
+                                          Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                          FontWeight="Medium"/>
+                                <TextBlock Text=" • "
+                                          FontSize="11"
+                                          Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                          Margin="4,0"/>
+                                <TextBlock Text="{Binding StatusMessage}"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                            </StackPanel>
+
                             <!-- Buffering Indicator -->
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,4,0,0"
                                        Visibility="{Binding IsBuffering, Converter={StaticResource BooleanToVisibilityConverter}}">

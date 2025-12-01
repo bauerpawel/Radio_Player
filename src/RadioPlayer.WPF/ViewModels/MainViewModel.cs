@@ -582,9 +582,9 @@ public partial class MainViewModel : ObservableObject
             {
                 PlaybackState.Stopped => "Stopped",
                 PlaybackState.Connecting => "Connecting...",
-                PlaybackState.Buffering => UpdateStatusWithPlaybackTime("Buffering..."),
-                PlaybackState.Playing => UpdateStatusWithPlaybackTime("Playing"),
-                PlaybackState.Paused => UpdateStatusWithPlaybackTime("Paused"),
+                PlaybackState.Buffering => "Buffering...",
+                PlaybackState.Playing => "Playing",
+                PlaybackState.Paused => "Paused",
                 PlaybackState.Error => "Error occurred",
                 _ => "Unknown"
             };
@@ -614,8 +614,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (progress.IsBuffering)
             {
-                var bufferStatus = $"Buffering... {progress.BufferDuration.TotalSeconds:F1}s";
-                StatusMessage = UpdateStatusWithPlaybackTime(bufferStatus);
+                StatusMessage = $"Buffering... {progress.BufferDuration.TotalSeconds:F1}s";
             }
         });
     }
@@ -658,16 +657,6 @@ public partial class MainViewModel : ObservableObject
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
                     PlaybackDuration = $"{hours:D2}:{minutes:D2}:{seconds:D2}";
-
-                    // Update status message with current state and time
-                    if (IsPlaying)
-                    {
-                        StatusMessage = UpdateStatusWithPlaybackTime("Playing");
-                    }
-                    else if (IsBuffering)
-                    {
-                        StatusMessage = UpdateStatusWithPlaybackTime("Buffering...");
-                    }
                 });
             }
         };
@@ -684,18 +673,6 @@ public partial class MainViewModel : ObservableObject
         _playbackTimer = null;
         _playbackStartTime = null;
         PlaybackDuration = "00:00:00";
-    }
-
-    /// <summary>
-    /// Update status message with playback time
-    /// </summary>
-    private string UpdateStatusWithPlaybackTime(string baseStatus)
-    {
-        if (_playbackStartTime.HasValue && !string.IsNullOrEmpty(PlaybackDuration) && PlaybackDuration != "00:00:00")
-        {
-            return $"{baseStatus} • {PlaybackDuration}";
-        }
-        return baseStatus;
     }
 
     partial void OnVolumeChanged(float value)
