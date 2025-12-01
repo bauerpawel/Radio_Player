@@ -148,7 +148,7 @@ public partial class AddCustomStationDialog : Window
         ValidationDetailsText.Text = message;
     }
 
-    private void AddButton_Click(object sender, RoutedEventArgs e)
+    private async void AddButton_Click(object sender, RoutedEventArgs e)
     {
         var streamUrl = StreamUrlTextBox.Text?.Trim();
         var stationName = StationNameTextBox.Text?.Trim();
@@ -175,6 +175,59 @@ public partial class AddCustomStationDialog : Window
             MessageBox.Show("Please enter a valid HTTP or HTTPS URL.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
             StreamUrlTextBox.Focus();
             return;
+        }
+
+        // Automatically validate stream if not already validated
+        // This is especially important for playlist files (.pls, .m3u, .m3u8)
+        if (_lastValidationResult == null || _lastValidationResult.ResolvedStreamUrl == null)
+        {
+            AddButton.IsEnabled = false;
+            try
+            {
+                _validationCts?.Cancel();
+                _validationCts = new CancellationTokenSource();
+
+                _lastValidationResult = await _validationService.ValidateStreamAsync(streamUrl, _validationCts.Token);
+
+                if (!_lastValidationResult.IsValid)
+                {
+                    var result = MessageBox.Show(
+                        $"Stream validation failed:\n{_lastValidationResult.ErrorMessage}\n\nDo you want to add it anyway?",
+                        "Validation Warning",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+
+                    if (result != MessageBoxResult.Yes)
+                    {
+                        AddButton.IsEnabled = true;
+                        return;
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                MessageBox.Show("Validation cancelled.", "Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
+                AddButton.IsEnabled = true;
+                return;
+            }
+            catch (Exception ex)
+            {
+                var result = MessageBox.Show(
+                    $"Error validating stream:\n{ex.Message}\n\nDo you want to add it anyway?",
+                    "Validation Error",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (result != MessageBoxResult.Yes)
+                {
+                    AddButton.IsEnabled = true;
+                    return;
+                }
+            }
+            finally
+            {
+                AddButton.IsEnabled = true;
+            }
         }
 
         // Use resolved stream URL if available (in case of playlist files)
