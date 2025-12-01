@@ -283,10 +283,19 @@ public partial class MainViewModel : ObservableObject
             CurrentTrack = "Loading...";
             await _radioPlayer.PlayAsync(SelectedStation);
 
-            // Register click with Radio Browser API
-            if (_radioBrowserService != null)
+            // Register click with Radio Browser API (only for non-custom stations)
+            // Custom stations don't exist in Radio Browser API, so skip click registration
+            if (_radioBrowserService != null && !SelectedStation.IsCustom)
             {
-                await _radioBrowserService.RegisterClickAsync(SelectedStation.StationUuid);
+                try
+                {
+                    await _radioBrowserService.RegisterClickAsync(SelectedStation.StationUuid);
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail playback if click registration fails
+                    System.Diagnostics.Debug.WriteLine($"[MainViewModel] Failed to register click: {ex.Message}");
+                }
             }
 
             // Start new playback history session
