@@ -217,6 +217,9 @@ public partial class MainViewModel : ObservableObject
 
             var cachedStations = await _repository.GetCachedStationsAsync(limit: 100);
 
+            // Filter out Russian stations
+            cachedStations = FilterOutRussianStations(cachedStations);
+
             if (cachedStations.Count > 0)
             {
                 await UpdateFavoriteStatusAsync(cachedStations);
@@ -264,6 +267,9 @@ public partial class MainViewModel : ObservableObject
                     codec: NormalizeFilter(CodecFilter),
                     limit: 100);
 
+                // Filter out Russian stations
+                stations = FilterOutRussianStations(stations);
+
                 // Cache the results
                 if (_repository != null && stations.Count > 0)
                 {
@@ -278,6 +284,9 @@ public partial class MainViewModel : ObservableObject
             else
             {
                 var stations = await _radioBrowserService.GetTopVotedStationsAsync(limit: 100);
+
+                // Filter out Russian stations
+                stations = FilterOutRussianStations(stations);
 
                 // Cache the results
                 if (_repository != null && stations.Count > 0)
@@ -355,6 +364,9 @@ public partial class MainViewModel : ObservableObject
                 tag: NormalizeFilter(GenreFilter),
                 codec: NormalizeFilter(CodecFilter),
                 limit: 100);
+
+            // Filter out Russian stations
+            stations = FilterOutRussianStations(stations);
 
             // Cache the search results
             if (_repository != null && stations.Count > 0)
@@ -488,6 +500,10 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = "Loading favorites...";
             var favorites = await _repository.GetFavoriteStationsAsync();
+
+            // Filter out Russian stations
+            favorites = FilterOutRussianStations(favorites);
+
             Stations = new ObservableCollection<RadioStation>(favorites);
             UpdateCurrentlyPlayingStationReference();
             StatusMessage = favorites.Count > 0
@@ -1155,4 +1171,32 @@ public partial class MainViewModel : ObservableObject
     }
 
     #endregion
+
+    /// <summary>
+    /// Check if a station is from Russia (blocked stations)
+    /// </summary>
+    private static bool IsRussianStation(RadioStation station)
+    {
+        if (station == null)
+            return false;
+
+        // Check country code (ISO 3166-1 alpha-2)
+        var countryCode = station.CountryCode?.ToUpperInvariant() ?? string.Empty;
+        if (countryCode == "RU" || countryCode == "BY")
+            return true;
+
+        // Check country name
+        var country = station.Country?.ToLowerInvariant() ?? string.Empty;
+        var russianNames = new[] { "russia", "russian federation", "россия", "belarus", "беларусь" };
+
+        return russianNames.Any(name => country.Contains(name));
+    }
+
+    /// <summary>
+    /// Filter out Russian stations from a list
+    /// </summary>
+    private static List<RadioStation> FilterOutRussianStations(List<RadioStation> stations)
+    {
+        return stations.Where(s => !IsRussianStation(s)).ToList();
+    }
 }
