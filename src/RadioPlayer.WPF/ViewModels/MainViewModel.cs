@@ -98,6 +98,13 @@ public partial class MainViewModel : ObservableObject
     // Recording state
     private System.Timers.Timer? _recordingTimer;
 
+    // Playback time tracking
+    private System.Timers.Timer? _playbackTimer;
+    private DateTime? _playbackStartTime;
+
+    [ObservableProperty]
+    private string _playbackDuration = "00:00:00";
+
     public MainViewModel()
     {
         // Constructor for design-time support
@@ -415,6 +422,9 @@ public partial class MainViewModel : ObservableObject
         // End current playback history session
         await EndCurrentPlaybackHistoryAsync();
 
+        // Stop playback timer
+        StopPlaybackTimer();
+
         _radioPlayer?.Stop();
         StatusMessage = "Stopped";
         CurrentlyPlayingStation = null;
@@ -558,13 +568,23 @@ public partial class MainViewModel : ObservableObject
             IsPlaying = state == PlaybackState.Playing;
             IsBuffering = state == PlaybackState.Buffering;
 
+            // Start or stop playback timer based on state
+            if (state == PlaybackState.Playing)
+            {
+                StartPlaybackTimer();
+            }
+            else if (state == PlaybackState.Stopped || state == PlaybackState.Error)
+            {
+                StopPlaybackTimer();
+            }
+
             StatusMessage = state switch
             {
                 PlaybackState.Stopped => "Stopped",
                 PlaybackState.Connecting => "Connecting...",
-                PlaybackState.Buffering => "Buffering...",
-                PlaybackState.Playing => "Playing",
-                PlaybackState.Paused => "Paused",
+                PlaybackState.Buffering => UpdateStatusWithPlaybackTime("Buffering..."),
+                PlaybackState.Playing => UpdateStatusWithPlaybackTime("Playing"),
+                PlaybackState.Paused => UpdateStatusWithPlaybackTime("Paused"),
                 PlaybackState.Error => "Error occurred",
                 _ => "Unknown"
             };
@@ -594,7 +614,8 @@ public partial class MainViewModel : ObservableObject
         {
             if (progress.IsBuffering)
             {
-                StatusMessage = $"Buffering... {progress.BufferDuration.TotalSeconds:F1}s";
+                var bufferStatus = $"Buffering... {progress.BufferDuration.TotalSeconds:F1}s";
+                StatusMessage = UpdateStatusWithPlaybackTime(bufferStatus);
             }
         });
     }
@@ -609,6 +630,72 @@ public partial class MainViewModel : ObservableObject
             CurrentlyPlayingStation = null;
             CurrentTrack = "No track information";
         });
+    }
+
+    /// <summary>
+    /// Start the playback timer to track how long the station has been playing
+    /// </summary>
+    private void StartPlaybackTimer()
+    {
+        // Stop existing timer if any
+        StopPlaybackTimer();
+
+        // Start timing
+        _playbackStartTime = DateTime.Now;
+        PlaybackDuration = "00:00:00";
+
+        // Create and start timer
+        _playbackTimer = new System.Timers.Timer(1000); // Update every second
+        _playbackTimer.Elapsed += (s, e) =>
+        {
+            if (_playbackStartTime.HasValue)
+            {
+                var elapsed = DateTime.Now - _playbackStartTime.Value;
+                var hours = (int)elapsed.TotalHours;
+                var minutes = elapsed.Minutes;
+                var seconds = elapsed.Seconds;
+
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    PlaybackDuration = $"{hours:D2}:{minutes:D2}:{seconds:D2}";
+
+                    // Update status message with current state and time
+                    if (IsPlaying)
+                    {
+                        StatusMessage = UpdateStatusWithPlaybackTime("Playing");
+                    }
+                    else if (IsBuffering)
+                    {
+                        StatusMessage = UpdateStatusWithPlaybackTime("Buffering...");
+                    }
+                });
+            }
+        };
+        _playbackTimer.Start();
+    }
+
+    /// <summary>
+    /// Stop the playback timer
+    /// </summary>
+    private void StopPlaybackTimer()
+    {
+        _playbackTimer?.Stop();
+        _playbackTimer?.Dispose();
+        _playbackTimer = null;
+        _playbackStartTime = null;
+        PlaybackDuration = "00:00:00";
+    }
+
+    /// <summary>
+    /// Update status message with playback time
+    /// </summary>
+    private string UpdateStatusWithPlaybackTime(string baseStatus)
+    {
+        if (_playbackStartTime.HasValue && !string.IsNullOrEmpty(PlaybackDuration) && PlaybackDuration != "00:00:00")
+        {
+            return $"{baseStatus} • {PlaybackDuration}";
+        }
+        return baseStatus;
     }
 
     partial void OnVolumeChanged(float value)
