@@ -33,9 +33,11 @@ This document provides comprehensive guidance for AI assistants working with the
 - Listening history tracking
 - Multi-language interface (English, German, Polish)
 - Material Design UI with system tray support
+- Content filtering - automatic filtering of Russian/Belarusian stations
+- Playback time tracking with visual display (HH:MM:SS)
 
 ### Key Statistics
-- **Version**: 1.2
+- **Version**: 1.3
 - **Lines of Code**: ~7,700 lines
 - **Files**: 44 C# files, 7 XAML views
 - **Framework**: .NET 10 (WPF)
@@ -693,7 +695,147 @@ public class BackupData
 - Test with longest language (often German) for layout
 - Update all language files when adding new strings
 
-### 8. Configuration (`AppConstants.cs`)
+### 8. Content Filtering (Russian Station Filter)
+
+**NEW in v1.3** - Automatic filtering of Russian and Belarusian stations.
+
+**Overview:**
+The application automatically filters out radio stations from Russia and Belarus from all station lists. This filtering is applied transparently across all browsing, search, and cached station results.
+
+**Detection Criteria:**
+Stations are identified as Russian/Belarusian based on:
+- **Country Code**: RU (Russia), BY (Belarus)
+- **Country Name** (case-insensitive):
+  - "Russia"
+  - "Russian Federation"
+  - "Россия" (Russia in Cyrillic)
+  - "Belarus"
+  - "Беларусь" (Belarus in Cyrillic)
+
+**Implementation in `MainViewModel.cs`:**
+
+```csharp
+/// <summary>
+/// Checks if a station is from Russia or Belarus
+/// </summary>
+private bool IsRussianStation(RadioStation station)
+{
+    // Check country code
+    if (station.CountryCode?.Equals("RU", StringComparison.OrdinalIgnoreCase) == true ||
+        station.CountryCode?.Equals("BY", StringComparison.OrdinalIgnoreCase) == true)
+        return true;
+
+    // Check country name
+    var country = station.Country?.ToLowerInvariant();
+    return country == "russia" ||
+           country == "russian federation" ||
+           country == "россия" ||
+           country == "belarus" ||
+           country == "беларусь";
+}
+
+/// <summary>
+/// Filters Russian stations from a list
+/// </summary>
+private List<RadioStation> FilterOutRussianStations(List<RadioStation> stations)
+{
+    return stations.Where(s => !IsRussianStation(s)).ToList();
+}
+```
+
+**Where Applied:**
+The filter is automatically applied in:
+- `LoadTopStationsAsync()` - Top voted stations
+- `SearchStationsAsync()` - Search results
+- `LoadCachedStationsAsync()` - Cached station browsing
+- `LoadFavoritesAsync()` - **NOT filtered** - existing favorites are preserved
+
+**Important Notes:**
+- **Custom stations are NOT filtered** - User-added stations are always shown
+- **Favorites are NOT filtered** - Previously saved favorites remain accessible
+- **Transparent operation** - No UI indication of filtering
+- **Performance** - Filtering happens client-side after API results
+- **No configuration** - Filter is always active and not user-configurable
+
+**Rationale:**
+This feature was added to provide content curation and align with certain content policies. The filter is comprehensive and catches both ASCII and Cyrillic country names.
+
+### 9. Playback Time Display
+
+**NEW in v1.3** - Visual playback time tracking in the UI.
+
+**Overview:**
+The application now displays the current playback duration prominently in the station information area, making it easy to see how long you've been listening to the current station.
+
+**Visual Format:**
+```
+[Clock Icon] HH:MM:SS • Status (Playing/Buffering)
+```
+
+**Implementation:**
+
+**In `MainViewModel.cs`:**
+```csharp
+private string _playbackTime = "00:00:00";
+public string PlaybackTime
+{
+    get => _playbackTime;
+    set => SetProperty(ref _playbackTime, value);
+}
+
+// Timer updates every second
+private void OnPlaybackTimerTick(object? sender, EventArgs e)
+{
+    if (_playbackStartTime.HasValue)
+    {
+        var elapsed = DateTime.Now - _playbackStartTime.Value;
+        PlaybackTime = elapsed.ToString(@"hh\:mm\:ss");
+    }
+}
+```
+
+**In `MainWindow.xaml`:**
+```xaml
+<!-- Playback time display with clock icon -->
+<StackPanel Orientation="Horizontal" Margin="0,5,0,0"
+            Visibility="{Binding IsPlaying, Converter={StaticResource BooleanToVisibilityConverter}}">
+    <materialDesign:PackIcon Kind="ClockOutline"
+                            Width="16" Height="16"
+                            VerticalAlignment="Center"
+                            Margin="0,0,5,0" />
+    <TextBlock Text="{Binding PlaybackTime}"
+              FontWeight="SemiBold"
+              VerticalAlignment="Center" />
+    <TextBlock Text=" • "
+              Margin="5,0"
+              VerticalAlignment="Center" />
+    <TextBlock Text="{Binding StatusMessage}"
+              VerticalAlignment="Center" />
+</StackPanel>
+```
+
+**Features:**
+- **Real-time updates** - Updates every second via DispatcherTimer
+- **Format** - HH:MM:SS (hours:minutes:seconds)
+- **Visibility** - Only shown when station is playing
+- **Position** - Displayed in station info area below song metadata
+- **Icon** - Material Design clock icon for visual clarity
+- **Combined status** - Shows playback time and status together
+
+**User Benefits:**
+- Track how long you've been listening
+- See session duration at a glance
+- Combined with status for comprehensive playback info
+- No longer hidden in status message area
+
+**Technical Details:**
+- Uses `DispatcherTimer` with 1-second interval
+- Starts when playback begins
+- Resets when station changes
+- Stops when playback stops
+- Format ensures consistent two-digit display
+
+### 10. Configuration (`AppConstants.cs`)
 
 **Structure:**
 ```csharp
@@ -1313,6 +1455,25 @@ public static class AppConstants
 
 ## Version History
 
+### Version 1.3 (2025-12-01)
+**New Features & Enhancements:**
+- **Content filtering** - Automatic filtering of Russian and Belarusian stations
+  - Detects stations by country code (RU, BY) and country name (including Cyrillic)
+  - Applied to top stations, search results, and cached station browsing
+  - Custom stations and existing favorites are not filtered
+- **Playback time display** - Visual playback duration tracking
+  - Displays current session duration with clock icon in HH:MM:SS format
+  - Positioned prominently in station info area below song metadata
+  - Updates in real-time every second during playback
+
+**Modified Components:**
+- `MainViewModel.cs` - Added station filtering logic and playback time tracking
+- `MainWindow.xaml` - Enhanced UI with playback time display
+
+**Purpose:**
+- Content curation and policy compliance
+- Improved user experience with visible playback duration
+
 ### Version 1.2 (2025-11-28)
 **Major Features Added:**
 - Stream recording to WAV/MP3 with ICY metadata tagging
@@ -1344,8 +1505,8 @@ public static class AppConstants
 
 ---
 
-**Document Version:** 1.2
-**Last Updated:** 2025-11-28
+**Document Version:** 1.3
+**Last Updated:** 2025-12-01
 **Maintained By:** Radio Player Development Team
 
 For questions or clarifications, refer to the README.md or examine the source code directly.
