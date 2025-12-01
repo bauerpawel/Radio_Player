@@ -150,6 +150,49 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
 
         DebugLogger.Log("PLAY", $"Starting playback: {station.Name} ({station.Codec})");
 
+        // Check if URL is a playlist file and resolve it
+        var streamUrl = station.UrlResolved;
+        if (IsPlaylistUrl(streamUrl))
+        {
+            DebugLogger.Log("PLAY", $"Detected playlist URL: {streamUrl}");
+            try
+            {
+                var resolvedUrl = await ResolvePlaylistUrlAsync(streamUrl, cancellationToken);
+                if (!string.IsNullOrEmpty(resolvedUrl))
+                {
+                    DebugLogger.Log("PLAY", $"Resolved playlist to stream URL: {resolvedUrl}");
+                    streamUrl = resolvedUrl;
+                    // Update station object with resolved URL for this playback session
+                    station = new RadioStation
+                    {
+                        StationUuid = station.StationUuid,
+                        Name = station.Name,
+                        UrlResolved = streamUrl,
+                        Codec = station.Codec,
+                        Bitrate = station.Bitrate,
+                        Country = station.Country,
+                        Language = station.Language,
+                        Tags = station.Tags,
+                        Favicon = station.Favicon,
+                        Homepage = station.Homepage,
+                        IsCustom = station.IsCustom,
+                        IsActive = station.IsActive,
+                        DateAdded = station.DateAdded,
+                        Id = station.Id
+                    };
+                }
+                else
+                {
+                    DebugLogger.Log("PLAY", "Failed to resolve playlist URL");
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.Log("PLAY", $"Error resolving playlist: {ex.Message}");
+                // Continue with original URL as fallback
+            }
+        }
+
         // Stop current playback
         Stop();
 
@@ -181,6 +224,96 @@ public class NAudioRadioPlayer : IRadioPlayer, IDisposable
         }, _cancellationTokenSource.Token);
 
         await Task.CompletedTask;
+    }
+
+    private bool IsPlaylistUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return false;
+
+        var lowerUrl = url.ToLowerInvariant();
+        return lowerUrl.EndsWith(".pls") ||
+               lowerUrl.EndsWith(".m3u") ||
+               lowerUrl.EndsWith(".m3u8") ||
+               lowerUrl.Contains(".pls?") ||
+               lowerUrl.Contains(".m3u?") ||
+               lowerUrl.Contains(".m3u8?");
+    }
+
+    private async Task<string?> ResolvePlaylistUrlAsync(string playlistUrl, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, playlistUrl);
+            request.Headers.Add("User-Agent", AppConstants.HttpHeaders.UserAgent);
+
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(content))
+                return null;
+
+            // Parse playlist based on type
+            var lowerUrl = playlistUrl.ToLowerInvariant();
+            if (lowerUrl.Contains(".pls"))
+            {
+                return ParsePlsPlaylist(content);
+            }
+            else if (lowerUrl.Contains(".m3u"))
+            {
+                return ParseM3uPlaylist(content);
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            DebugLogger.Log("PLAYLIST", $"Error downloading playlist: {ex.Message}");
+            return null;
+        }
+    }
+
+    private string? ParsePlsPlaylist(string content)
+    {
+        var lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var line in lines)
+        {
+            var trimmedLine = line.Trim();
+            if (trimmedLine.StartsWith("File", StringComparison.OrdinalIgnoreCase))
+            {
+                var parts = trimmedLine.Split('=', 2);
+                if (parts.Length == 2)
+                {
+                    var url = parts[1].Trim();
+                    if (Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+                        (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+                    {
+                        return url;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private string? ParseM3uPlaylist(string content)
+    {
+        var lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var line in lines)
+        {
+            var trimmedLine = line.Trim();
+            if (trimmedLine.StartsWith("#"))
+                continue;
+
+            if (Uri.TryCreate(trimmedLine, UriKind.Absolute, out var uri) &&
+                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            {
+                return trimmedLine;
+            }
+        }
+        return null;
     }
 
     public void Stop()
