@@ -142,6 +142,10 @@
     "AdditionalInfo": "Zusätzliche Informationen",
     "Votes": "Stimmen",
     "ClickCount": "Klickanzahl",
+    "PlayStation": "Sender abspielen",
+    "SimilarStations": "Ähnliche Sender",
+    "LoadingSimilar": "Ähnliche Sender werden geladen...",
+    "NoSimilar": "Keine ähnlichen Sender gefunden",
     "Close": "Schließen",
     "OpenHomepage": "Homepage öffnen"
   },

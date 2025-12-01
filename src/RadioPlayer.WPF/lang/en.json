@@ -142,6 +142,10 @@
     "AdditionalInfo": "Additional Information",
     "Votes": "Votes",
     "ClickCount": "Click Count",
+    "PlayStation": "Play Station",
+    "SimilarStations": "Similar Stations",
+    "LoadingSimilar": "Loading similar stations...",
+    "NoSimilar": "No similar stations found",
     "Close": "Close",
     "OpenHomepage": "Open Homepage"
   },

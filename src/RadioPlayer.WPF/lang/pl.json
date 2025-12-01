@@ -142,6 +142,10 @@
     "AdditionalInfo": "Dodatkowe informacje",
     "Votes": "Głosy",
     "ClickCount": "Liczba kliknięć",
+    "PlayStation": "Odtwórz stację",
+    "SimilarStations": "Podobne stacje",
+    "LoadingSimilar": "Ładowanie podobnych stacji...",
+    "NoSimilar": "Nie znaleziono podobnych stacji",
     "Close": "Zamknij",
     "OpenHomepage": "Otwórz stronę główną"
   },
