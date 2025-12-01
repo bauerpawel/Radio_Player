@@ -670,6 +670,41 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private async Task EditCustomStationAsync()
+    {
+        if (_repository == null || _streamValidationService == null || SelectedStation == null) return;
+
+        // Only allow editing custom stations
+        if (!SelectedStation.IsCustom)
+        {
+            StatusMessage = "Only custom stations can be edited";
+            return;
+        }
+
+        try
+        {
+            // Show edit custom station dialog
+            var dialog = new Views.AddCustomStationDialog(_streamValidationService, SelectedStation);
+            var result = dialog.ShowDialog();
+
+            if (result == true && dialog.Station != null)
+            {
+                // Update station in database
+                await _repository.UpdateStationAsync(dialog.Station);
+
+                StatusMessage = $"Custom station '{dialog.Station.Name}' updated successfully";
+
+                // Reload custom stations to reflect changes
+                await LoadCustomStationsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error editing custom station: {ex.Message}";
+        }
+    }
+
     /// <summary>
     /// Start tracking playback history for the current station
     /// </summary>

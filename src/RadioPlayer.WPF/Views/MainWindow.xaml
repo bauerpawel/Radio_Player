@@ -154,6 +154,17 @@
                         </Button>
 
                         <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                Command="{Binding EditCustomStationCommand}"
+                                IsEnabled="{Binding SelectedStation.IsCustom}"
+                                Margin="0,0,0,8"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Pencil" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="{helpers:Translate Browse.EditCustomStation}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Style="{StaticResource MaterialDesignFlatButton}"
                                 Command="{Binding DeleteCustomStationCommand}"
                                 IsEnabled="{Binding SelectedStation.IsCustom}"
                                 Margin="0,0,0,8"

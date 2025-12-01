@@ -12,13 +12,42 @@ public partial class AddCustomStationDialog : Window
     private readonly IStreamValidationService _validationService;
     private StreamValidationResult? _lastValidationResult;
     private CancellationTokenSource? _validationCts;
+    private readonly RadioStation? _existingStation;
 
     public RadioStation? Station { get; private set; }
+    public bool IsEditMode => _existingStation != null;
 
-    public AddCustomStationDialog(IStreamValidationService validationService)
+    public AddCustomStationDialog(IStreamValidationService validationService, RadioStation? existingStation = null)
     {
         _validationService = validationService;
+        _existingStation = existingStation;
         InitializeComponent();
+
+        // Set dialog title based on mode
+        if (IsEditMode)
+        {
+            Title = "Edit Custom Station";
+            AddButton.Content = "Save";
+            LoadExistingStation();
+        }
+        else
+        {
+            Title = "Add Custom Station";
+            AddButton.Content = "Add";
+        }
+    }
+
+    private void LoadExistingStation()
+    {
+        if (_existingStation == null) return;
+
+        StationNameTextBox.Text = _existingStation.Name;
+        StreamUrlTextBox.Text = _existingStation.UrlResolved;
+        LogoUrlTextBox.Text = _existingStation.Favicon;
+        GenreTextBox.Text = _existingStation.Tags;
+        CountryTextBox.Text = _existingStation.Country;
+        LanguageTextBox.Text = _existingStation.Language;
+        HomepageTextBox.Text = _existingStation.Homepage;
     }
 
     private async void TestStreamButton_Click(object sender, RoutedEventArgs e)
@@ -148,32 +177,58 @@ public partial class AddCustomStationDialog : Window
             return;
         }
 
-        // Create station object
-        Station = new RadioStation
-        {
-            StationUuid = Guid.NewGuid().ToString(), // Generate unique UUID for custom station
-            Name = stationName,
-            UrlResolved = streamUrl,
-            Favicon = LogoUrlTextBox.Text?.Trim() ?? string.Empty,
-            Tags = GenreTextBox.Text?.Trim() ?? string.Empty,
-            Country = CountryTextBox.Text?.Trim() ?? string.Empty,
-            Language = LanguageTextBox.Text?.Trim() ?? string.Empty,
-            Homepage = HomepageTextBox.Text?.Trim() ?? string.Empty,
-            IsCustom = true,
-            IsActive = true,
-            DateAdded = DateTime.UtcNow
-        };
+        // Use resolved stream URL if available (in case of playlist files)
+        var actualStreamUrl = _lastValidationResult?.ResolvedStreamUrl ?? streamUrl;
 
-        // Use validation result if available
-        if (_lastValidationResult?.IsValid == true)
+        // Create or update station object
+        if (IsEditMode && _existingStation != null)
         {
-            Station.Codec = _lastValidationResult.Codec ?? "Unknown";
-            Station.Bitrate = _lastValidationResult.Bitrate ?? 0;
+            // Edit mode: Update existing station
+            Station = _existingStation;
+            Station.Name = stationName;
+            Station.UrlResolved = actualStreamUrl;
+            Station.Favicon = LogoUrlTextBox.Text?.Trim() ?? string.Empty;
+            Station.Tags = GenreTextBox.Text?.Trim() ?? string.Empty;
+            Station.Country = CountryTextBox.Text?.Trim() ?? string.Empty;
+            Station.Language = LanguageTextBox.Text?.Trim() ?? string.Empty;
+            Station.Homepage = HomepageTextBox.Text?.Trim() ?? string.Empty;
+
+            // Update codec and bitrate if validated
+            if (_lastValidationResult?.IsValid == true)
+            {
+                Station.Codec = _lastValidationResult.Codec ?? Station.Codec;
+                Station.Bitrate = _lastValidationResult.Bitrate ?? Station.Bitrate;
+            }
         }
         else
         {
-            Station.Codec = "Unknown";
-            Station.Bitrate = 0;
+            // Add mode: Create new station
+            Station = new RadioStation
+            {
+                StationUuid = Guid.NewGuid().ToString(), // Generate unique UUID for custom station
+                Name = stationName,
+                UrlResolved = actualStreamUrl, // Use resolved URL (from playlist if applicable)
+                Favicon = LogoUrlTextBox.Text?.Trim() ?? string.Empty,
+                Tags = GenreTextBox.Text?.Trim() ?? string.Empty,
+                Country = CountryTextBox.Text?.Trim() ?? string.Empty,
+                Language = LanguageTextBox.Text?.Trim() ?? string.Empty,
+                Homepage = HomepageTextBox.Text?.Trim() ?? string.Empty,
+                IsCustom = true,
+                IsActive = true,
+                DateAdded = DateTime.UtcNow
+            };
+
+            // Use validation result if available
+            if (_lastValidationResult?.IsValid == true)
+            {
+                Station.Codec = _lastValidationResult.Codec ?? "Unknown";
+                Station.Bitrate = _lastValidationResult.Bitrate ?? 0;
+            }
+            else
+            {
+                Station.Codec = "Unknown";
+                Station.Bitrate = 0;
+            }
         }
 
         DialogResult = true;
