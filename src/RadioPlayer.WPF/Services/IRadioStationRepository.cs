@@ -42,4 +42,11 @@ public interface IRadioStationRepository
     // Settings management
     Task<string?> GetSettingAsync(string key);
     Task SetSettingAsync(string key, string value);
+
+    // Station caching
+    Task BulkAddOrUpdateStationsAsync(IEnumerable<RadioStation> stations);
+    Task<List<RadioStation>> GetCachedStationsAsync(int limit = 100, bool excludeCustom = true);
+    Task<DateTime?> GetLastCacheUpdateAsync();
+    Task UpdateCacheTimestampAsync();
+    Task ClearStationCacheAsync();
 }
