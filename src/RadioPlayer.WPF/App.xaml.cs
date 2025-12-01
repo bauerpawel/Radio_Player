@@ -106,6 +106,7 @@ public partial class App : Application
             return new NAudioRadioRecorder(radioPlayer);
         });
         services.AddSingleton<ILanguageService, LanguageService>();
+        services.AddSingleton<IPlaylistParserService, PlaylistParserService>();
         services.AddSingleton<IStreamValidationService, StreamValidationService>();
         services.AddSingleton<IExportImportService, ExportImportService>();
 

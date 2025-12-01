@@ -23,6 +23,7 @@
     "CustomStations": "Eigene Sender",
     "MyStations": "Meine Sender",
     "AddCustomStation": "Sender hinzufügen",
+    "EditCustomStation": "Sender bearbeiten",
     "DeleteCustomStation": "Sender löschen",
     "Filters": "Filter",
     "Country": "Land",

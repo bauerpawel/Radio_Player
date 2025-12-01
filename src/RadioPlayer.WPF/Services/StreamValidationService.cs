@@ -12,12 +12,14 @@ namespace RadioPlayer.WPF.Services;
 public class StreamValidationService : IStreamValidationService
 {
     private readonly HttpClient _httpClient;
+    private readonly IPlaylistParserService _playlistParser;
     private const int ValidationTimeoutSeconds = 10;
     private const int MinBytesToRead = 4096; // Read at least 4KB to verify stream works
 
-    public StreamValidationService(HttpClient httpClient)
+    public StreamValidationService(HttpClient httpClient, IPlaylistParserService playlistParser)
     {
         _httpClient = httpClient;
+        _playlistParser = playlistParser;
     }
 
     public async Task<StreamValidationResult> ValidateStreamAsync(string streamUrl, CancellationToken cancellationToken = default)
@@ -38,6 +40,31 @@ public class StreamValidationService : IStreamValidationService
             {
                 result.ErrorMessage = "Invalid URL format. Must be HTTP or HTTPS.";
                 return result;
+            }
+
+            // Check if URL is a playlist file
+            if (_playlistParser.IsPlaylistUrl(streamUrl))
+            {
+                var playlistResult = await _playlistParser.ParsePlaylistAsync(streamUrl, cancellationToken);
+
+                if (!playlistResult.IsSuccess)
+                {
+                    result.ErrorMessage = $"Playlist error: {playlistResult.ErrorMessage}";
+                    return result;
+                }
+
+                if (playlistResult.StreamUrls.Count == 0)
+                {
+                    result.ErrorMessage = "No stream URLs found in playlist";
+                    return result;
+                }
+
+                // Validate the first stream URL from the playlist
+                var firstStreamUrl = playlistResult.StreamUrls[0];
+                result.ResolvedStreamUrl = firstStreamUrl;
+
+                // Note: We'll recursively validate the resolved URL
+                return await ValidateStreamAsync(firstStreamUrl, cancellationToken);
             }
 
             // Create request with timeout

@@ -56,4 +56,9 @@ public class StreamValidationResult
     /// Genre from ICY headers if available
     /// </summary>
     public string? Genre { get; set; }
+
+    /// <summary>
+    /// The actual stream URL (may differ from input if input was a playlist)
+    /// </summary>
+    public string? ResolvedStreamUrl { get; set; }
 }
