@@ -38,6 +38,8 @@ A modern desktop radio player built with .NET 10 and WPF, providing access to 51
 - ✅ **Play/Stop controls** with status indicators
 - ✅ **Buffering visualization** - see real-time buffer status
 - ✅ **Now Playing display** - shows current track with station logo
+- ✅ **Global hotkeys** - system-wide keyboard shortcuts that work even when minimized
+- ✅ **Playback time display** - visual duration tracking in HH:MM:SS format
 
 ### Recording
 - ✅ **Stream recording** - record currently playing radio to file
@@ -154,6 +156,35 @@ Record your favorite radio broadcasts with easy file management:
 - All streaming formats are recorded: MP3, AAC, OGG/Vorbis, OGG/Opus, OGG/FLAC
 - Output converted to WAV or MP3 for universal compatibility
 
+### Global Hotkeys
+
+Control the radio player from anywhere on your system with system-wide keyboard shortcuts that work even when the application is minimized or in the system tray.
+
+**Available Hotkeys:**
+- **Ctrl+Shift+P** - Play/Pause toggle (plays if stopped, stops if playing)
+- **Ctrl+Shift+S** - Stop playback
+- **Ctrl+Shift+Right** - Next station (cycles through current station list)
+- **Ctrl+Shift+Left** - Previous station (cycles through current station list)
+- **Ctrl+Shift+Up** - Volume up (increases by 10%, unmutes if muted)
+- **Ctrl+Shift+Down** - Volume down (decreases by 10%, mutes at 0%)
+- **Ctrl+Shift+M** - Mute/Unmute toggle (preserves volume level)
+
+**Key Features:**
+- ✅ **System-wide** - Works even when app is minimized to system tray
+- ✅ **Thread-safe** - All hotkey callbacks are properly synchronized
+- ✅ **Smart navigation** - Next/Previous wraps around the station list
+- ✅ **Smart volume** - Volume controls automatically handle mute state
+- ✅ **Error handling** - Gracefully handles conflicts with other applications
+- ✅ **Non-blocking** - Hotkey registration failures don't prevent app startup
+
+**Use Cases:**
+- Control playback while working in other applications
+- Quickly switch stations without switching windows
+- Adjust volume system-wide with keyboard
+- Pause radio instantly from anywhere
+
+**Note:** Global hotkeys are currently not user-configurable. They use fixed keyboard shortcuts to ensure consistency and avoid conflicts.
+
 ## 📦 Building Standalone EXE
 
 ### Method 1: Self-Contained Deployment (Recommended)
@@ -240,6 +271,7 @@ Based on comprehensive research for optimal performance and reliability:
 - **MVVM**: CommunityToolkit.Mvvm 8.4.0
 - **Dependency Injection**: Microsoft.Extensions.DependencyInjection 10.0.0
 - **System Tray**: System.Windows.Forms (NotifyIcon)
+- **Global Hotkeys**: NHotkey.Wpf 3.0.0 (system-wide keyboard shortcuts)
 
 ## 📁 Project Structure
 
@@ -272,6 +304,8 @@ Radio_Player/
     │   ├── RadioStationRepository.cs       # SQLite database operations
     │   ├── IRadioPlayer.cs                 # Radio player interface
     │   ├── NAudioRadioPlayer.cs            # Audio streaming player
+    │   ├── IGlobalHotkeyService.cs         # Global hotkey service interface
+    │   ├── GlobalHotkeyService.cs          # System-wide hotkey management
     │   └── DTOs/                            # Data transfer objects
     ├── Converters/                          # Value converters for XAML
     │   └── ValueConverters.cs              # UI binding converters
@@ -652,6 +686,8 @@ Nowoczesny odtwarzacz radia internetowego zbudowany w .NET 10 i WPF, zapewniają
 - ✅ **Kontrolki Play/Stop** ze wskaźnikami statusu
 - ✅ **Wizualizacja buforowania** - zobacz status bufora w czasie rzeczywistym
 - ✅ **Wyświetlanie "Teraz odtwarzane"** - pokazuje bieżący utwór z logo stacji
+- ✅ **Globalne skróty klawiszowe** - systemowe skróty działające nawet przy zminimalizowanej aplikacji
+- ✅ **Wyświetlanie czasu odtwarzania** - wizualne śledzenie czasu w formacie HH:MM:SS
 
 ### Dodatkowe Funkcje
 - ✅ **Integracja z zasobnikiem systemowym** - minimalizacja do zasobnika (opcjonalnie w ustawieniach)
@@ -728,6 +764,35 @@ Zobacz `libs/flac/README.md` dla szczegółowych instrukcji.
 6. Dostosuj głośność suwakiem
 7. Zobacz szczegóły stacji przyciskiem Details
 8. Sprawdź historię odtwarzania przyciskiem History
+
+### Globalne Skróty Klawiszowe
+
+Kontroluj odtwarzacz radia z dowolnego miejsca w systemie za pomocą systemowych skrótów klawiszowych, które działają nawet gdy aplikacja jest zminimalizowana lub w zasobniku systemowym.
+
+**Dostępne Skróty:**
+- **Ctrl+Shift+P** - Przełączanie Play/Pause (odtwarza gdy zatrzymane, zatrzymuje gdy odtwarza)
+- **Ctrl+Shift+S** - Zatrzymanie odtwarzania
+- **Ctrl+Shift+Right** - Następna stacja (przechodzi przez aktualną listę stacji)
+- **Ctrl+Shift+Left** - Poprzednia stacja (przechodzi przez aktualną listę stacji)
+- **Ctrl+Shift+Up** - Zwiększ głośność (o 10%, włącza dźwięk jeśli wyciszony)
+- **Ctrl+Shift+Down** - Zmniejsz głośność (o 10%, wycisza przy 0%)
+- **Ctrl+Shift+M** - Przełączanie wyciszenia (zachowuje poziom głośności)
+
+**Kluczowe Funkcje:**
+- ✅ **Systemowe** - Działa nawet gdy aplikacja jest zminimalizowana do zasobnika systemowego
+- ✅ **Bezpieczne wątkowo** - Wszystkie wywołania skrótów są prawidłowo synchronizowane
+- ✅ **Inteligentna nawigacja** - Następna/Poprzednia zawijają się na początku/końcu listy
+- ✅ **Inteligentna głośność** - Kontrolki głośności automatycznie obsługują stan wyciszenia
+- ✅ **Obsługa błędów** - Eleganckie radzenie sobie z konfliktami z innymi aplikacjami
+- ✅ **Nieblokujące** - Błędy rejestracji skrótów nie blokują uruchomienia aplikacji
+
+**Przypadki użycia:**
+- Kontrola odtwarzania podczas pracy w innych aplikacjach
+- Szybkie przełączanie stacji bez zmiany okna
+- Systemowa regulacja głośności za pomocą klawiatury
+- Natychmiastowe pauzowanie radia z dowolnego miejsca
+
+**Uwaga:** Globalne skróty klawiszowe nie są obecnie konfigurowalne przez użytkownika. Używają ustalonych kombinacji klawiszy dla zapewnienia spójności i uniknięcia konfliktów.
 
 ## 📦 Kompilacja do Samodzielnego Pliku EXE
 
@@ -813,6 +878,7 @@ Po zbudowaniu, plik `RadioPlayer.exe` może być dystrybuowany na inne komputery
 - **MVVM**: CommunityToolkit.Mvvm 8.4.0
 - **Wstrzykiwanie Zależności**: Microsoft.Extensions.DependencyInjection 10.0.0
 - **Zasobnik Systemowy**: System.Windows.Forms (NotifyIcon)
+- **Globalne Skróty**: NHotkey.Wpf 3.0.0 (systemowe skróty klawiszowe)
 
 ## 📖 Przewodnik Użytkownika
 
