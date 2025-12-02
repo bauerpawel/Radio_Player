@@ -105,6 +105,12 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _playbackDuration = "00:00:00";
 
+    // Mute state
+    [ObservableProperty]
+    private bool _isMuted;
+
+    private float _volumeBeforeMute = 0.8f;
+
     public MainViewModel()
     {
         // Constructor for design-time support
@@ -1199,4 +1205,118 @@ public partial class MainViewModel : ObservableObject
     {
         return stations.Where(s => !IsRussianStation(s)).ToList();
     }
+
+    #region Global Hotkey Commands
+
+    /// <summary>
+    /// Toggle between play and pause/stop
+    /// </summary>
+    [RelayCommand]
+    private async Task TogglePlayPauseAsync()
+    {
+        if (IsPlaying || IsBuffering)
+        {
+            await StopStationAsync();
+        }
+        else if (SelectedStation != null)
+        {
+            await PlayStationAsync();
+        }
+    }
+
+    /// <summary>
+    /// Navigate to the next station in the list and play it
+    /// </summary>
+    [RelayCommand]
+    private async Task NextStationAsync()
+    {
+        if (Stations == null || Stations.Count == 0)
+            return;
+
+        var currentIndex = SelectedStation != null
+            ? Stations.IndexOf(SelectedStation)
+            : -1;
+
+        var nextIndex = (currentIndex + 1) % Stations.Count;
+        SelectedStation = Stations[nextIndex];
+
+        await PlayStationAsync();
+    }
+
+    /// <summary>
+    /// Navigate to the previous station in the list and play it
+    /// </summary>
+    [RelayCommand]
+    private async Task PreviousStationAsync()
+    {
+        if (Stations == null || Stations.Count == 0)
+            return;
+
+        var currentIndex = SelectedStation != null
+            ? Stations.IndexOf(SelectedStation)
+            : -1;
+
+        var previousIndex = currentIndex <= 0
+            ? Stations.Count - 1
+            : currentIndex - 1;
+
+        SelectedStation = Stations[previousIndex];
+
+        await PlayStationAsync();
+    }
+
+    /// <summary>
+    /// Toggle mute on/off
+    /// </summary>
+    [RelayCommand]
+    private void ToggleMute()
+    {
+        if (IsMuted)
+        {
+            // Unmute - restore previous volume
+            Volume = _volumeBeforeMute;
+            IsMuted = false;
+        }
+        else
+        {
+            // Mute - save current volume and set to 0
+            _volumeBeforeMute = Volume;
+            Volume = 0f;
+            IsMuted = true;
+        }
+    }
+
+    /// <summary>
+    /// Increase volume by 10%
+    /// </summary>
+    [RelayCommand]
+    private void VolumeUp()
+    {
+        // Increase by 0.1 (10%) but don't exceed 1.0 (100%)
+        Volume = Math.Min(1.0f, Volume + 0.1f);
+
+        // If we were muted, unmute
+        if (IsMuted)
+        {
+            IsMuted = false;
+        }
+    }
+
+    /// <summary>
+    /// Decrease volume by 10%
+    /// </summary>
+    [RelayCommand]
+    private void VolumeDown()
+    {
+        // Decrease by 0.1 (10%) but don't go below 0.0 (0%)
+        Volume = Math.Max(0f, Volume - 0.1f);
+
+        // If volume is now 0, consider it muted
+        if (Volume == 0f)
+        {
+            IsMuted = true;
+        }
+    }
+
+    #endregion
 }
