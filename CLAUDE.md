@@ -35,11 +35,12 @@ This document provides comprehensive guidance for AI assistants working with the
 - Material Design UI with system tray support
 - Content filtering - automatic filtering of Russian/Belarusian stations
 - Playback time tracking with visual display (HH:MM:SS)
+- Global hotkeys - system-wide keyboard shortcuts that work even when minimized
 
 ### Key Statistics
-- **Version**: 1.3
-- **Lines of Code**: ~7,700 lines
-- **Files**: 44 C# files, 7 XAML views
+- **Version**: 1.4
+- **Lines of Code**: ~7,900 lines
+- **Files**: 46 C# files, 7 XAML views
 - **Framework**: .NET 10 (WPF)
 - **Architecture**: MVVM with Dependency Injection
 - **Database**: SQLite with ADO.NET
@@ -82,6 +83,7 @@ This document provides comprehensive guidance for AI assistants working with the
 - **MaterialDesignThemes 5.1.0** - Material Design styling
 - **MaterialDesignColors 3.1.0** - Material Design color palettes
 - **System.Windows.Forms** - For NotifyIcon (system tray)
+- **NHotkey.Wpf 3.0.0** - Global hotkey registration (system-wide keyboard shortcuts)
 
 ---
 
@@ -835,7 +837,92 @@ private void OnPlaybackTimerTick(object? sender, EventArgs e)
 - Stops when playback stops
 - Format ensures consistent two-digit display
 
-### 10. Configuration (`AppConstants.cs`)
+### 10. Global Hotkeys
+
+**NEW in v1.4** - System-wide keyboard shortcuts that work even when the application is minimized.
+
+**Overview:**
+The application now supports global hotkeys (also known as system-wide keyboard shortcuts) that allow users to control playback from anywhere in the system, even when the Radio Player window is minimized or not in focus.
+
+**Supported Hotkeys:**
+- **Ctrl+Shift+P** - Play/Pause toggle
+- **Ctrl+Shift+S** - Stop playback
+- **Ctrl+Shift+Right** - Next station
+- **Ctrl+Shift+Left** - Previous station
+- **Ctrl+Shift+Up** - Volume up (increase by 10%)
+- **Ctrl+Shift+Down** - Volume down (decrease by 10%)
+- **Ctrl+Shift+M** - Mute/Unmute toggle
+
+**Implementation in `GlobalHotkeyService.cs`:**
+
+```csharp
+public interface IGlobalHotkeyService : IDisposable
+{
+    void RegisterHotkeys(
+        Action onPlayPause,
+        Action onStop,
+        Action onNextStation,
+        Action onPreviousStation,
+        Action onVolumeUp,
+        Action onVolumeDown,
+        Action onMute);
+
+    void UnregisterHotkeys();
+    bool AreHotkeysRegistered { get; }
+}
+```
+
+**Integration in `MainViewModel.cs`:**
+- `TogglePlayPauseCommand` - Plays if stopped, stops if playing
+- `NextStationCommand` - Navigates to next station in list and plays it
+- `PreviousStationCommand` - Navigates to previous station in list and plays it
+- `ToggleMuteCommand` - Toggles mute on/off, preserving volume level
+- `VolumeUpCommand` - Increases volume by 10%, unmutes if muted
+- `VolumeDownCommand` - Decreases volume by 10%, mutes if volume reaches 0
+
+**Key Features:**
+- **System-wide** - Works even when app is minimized to tray
+- **Thread-safe** - All callbacks use Dispatcher.Invoke for UI thread safety
+- **Error handling** - Gracefully handles hotkey registration failures
+- **Auto-cleanup** - Hotkeys automatically unregistered when app closes
+- **Non-blocking** - Registration failures don't prevent app startup
+
+**Technical Details:**
+- Uses **NHotkey.Wpf 3.0.0** library for hotkey registration
+- Registered in `MainWindow.Loaded` event
+- Cleaned up in `MainWindow.Closing` event
+- Commands check `CanExecute` before execution
+- All callbacks marshalled to UI thread via `Dispatcher.Invoke`
+
+**Station Navigation:**
+- Next/Previous commands cycle through the current station list
+- Automatically wraps around (previous from first goes to last, next from last goes to first)
+- Plays the selected station immediately
+- Works with any loaded station list (Top Stations, Search Results, Favorites, Custom Stations)
+
+**Volume Control:**
+- Volume changes in 10% increments (0.0 to 1.0 scale)
+- Volume up unmutes if currently muted
+- Volume down to 0 automatically mutes
+- Mute toggle preserves previous volume level
+
+**Conflict Handling:**
+- If hotkeys are already registered by another application, the app continues without errors
+- Individual hotkey registration failures don't affect other hotkeys
+- Debug logging reports registration status
+
+**Use Cases:**
+- Control playback while working in other applications
+- Quickly switch stations without switching windows
+- Adjust volume system-wide
+- Pause playback instantly from anywhere
+
+**Important Notes:**
+- Hotkeys are NOT user-configurable in the current version (fixed shortcuts)
+- Future enhancement could add settings dialog for custom hotkey assignment
+- Windows only - uses Windows API via NHotkey.Wpf
+
+### 11. Configuration (`AppConstants.cs`)
 
 **Structure:**
 ```csharp
@@ -944,6 +1031,21 @@ public static class AppConstants
     - [ ] All dialogs translated
     - [ ] Settings persist language choice
     - [ ] Fallback to English for missing translations
+
+11. **Global Hotkeys (v1.4)**
+    - [ ] Ctrl+Shift+P toggles play/pause
+    - [ ] Ctrl+Shift+S stops playback
+    - [ ] Ctrl+Shift+Right plays next station
+    - [ ] Ctrl+Shift+Left plays previous station
+    - [ ] Ctrl+Shift+Up increases volume by 10%
+    - [ ] Ctrl+Shift+Down decreases volume by 10%
+    - [ ] Ctrl+Shift+M toggles mute
+    - [ ] Hotkeys work when app is minimized
+    - [ ] Hotkeys work when app is in system tray
+    - [ ] Hotkeys work when other app has focus
+    - [ ] Station navigation wraps around list
+    - [ ] Volume changes respect min/max bounds (0-100%)
+    - [ ] Mute preserves previous volume level
 
 ### Recommended Test Stations
 
@@ -1455,6 +1557,33 @@ public static class AppConstants
 
 ## Version History
 
+### Version 1.4 (2025-12-02)
+**New Features & Enhancements:**
+- **Global hotkeys** - System-wide keyboard shortcuts for controlling playback
+  - Ctrl+Shift+P: Play/Pause toggle
+  - Ctrl+Shift+S: Stop playback
+  - Ctrl+Shift+Right: Next station
+  - Ctrl+Shift+Left: Previous station
+  - Ctrl+Shift+Up: Volume up (10% increment)
+  - Ctrl+Shift+Down: Volume down (10% decrement)
+  - Ctrl+Shift+M: Mute/Unmute toggle
+  - Works even when app is minimized or in system tray
+
+**New Components:**
+- `IGlobalHotkeyService.cs` - Global hotkey service interface
+- `GlobalHotkeyService.cs` - Global hotkey service implementation using NHotkey.Wpf
+
+**Modified Components:**
+- `MainViewModel.cs` - Added TogglePlayPause, NextStation, PreviousStation, ToggleMute, VolumeUp, VolumeDown commands
+- `MainWindow.xaml.cs` - Integrated global hotkey service, registered hotkeys on window load
+- `App.xaml.cs` - Registered IGlobalHotkeyService in DI container
+- `RadioPlayer.WPF.csproj` - Added NHotkey.Wpf 3.0.0 package
+
+**Purpose:**
+- Enhanced user experience with system-wide playback control
+- Improved productivity - control radio without switching windows
+- Better integration with system tray usage
+
 ### Version 1.3 (2025-12-01)
 **New Features & Enhancements:**
 - **Content filtering** - Automatic filtering of Russian and Belarusian stations
@@ -1505,8 +1634,8 @@ public static class AppConstants
 
 ---
 
-**Document Version:** 1.3
-**Last Updated:** 2025-12-01
+**Document Version:** 1.4
+**Last Updated:** 2025-12-02
 **Maintained By:** Radio Player Development Team
 
 For questions or clarifications, refer to the README.md or examine the source code directly.

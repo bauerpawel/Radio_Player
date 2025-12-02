@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using RadioPlayer.WPF.Helpers;
+using RadioPlayer.WPF.Services;
 using RadioPlayer.WPF.ViewModels;
 using Forms = System.Windows.Forms;
 
@@ -16,13 +17,15 @@ namespace RadioPlayer.WPF.Views;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel;
+    private readonly IGlobalHotkeyService _hotkeyService;
     private Forms.NotifyIcon? _notifyIcon;
     private bool _isClosing = false;
 
-    public MainWindow(MainViewModel viewModel)
+    public MainWindow(MainViewModel viewModel, IGlobalHotkeyService hotkeyService)
     {
         InitializeComponent();
         _viewModel = viewModel;
+        _hotkeyService = hotkeyService;
         DataContext = _viewModel;
 
         // Subscribe to property changes for station logo updates
@@ -39,6 +42,9 @@ public partial class MainWindow : Window
         Loaded += (s, e) =>
         {
             _viewModel.LoadTopStationsCommand.Execute(null);
+
+            // Register global hotkeys after window is loaded
+            InitializeGlobalHotkeys();
         };
     }
 
@@ -175,12 +181,80 @@ public partial class MainWindow : Window
         }
         else
         {
+            // Clean up global hotkeys
+            _hotkeyService?.Dispose();
+
             // Clean up notify icon
             if (_notifyIcon != null)
             {
                 _notifyIcon.Visible = false;
                 _notifyIcon.Dispose();
             }
+        }
+    }
+
+    private void InitializeGlobalHotkeys()
+    {
+        try
+        {
+            _hotkeyService.RegisterHotkeys(
+                onPlayPause: () => Dispatcher.Invoke(() =>
+                {
+                    if (_viewModel.TogglePlayPauseCommand.CanExecute(null))
+                    {
+                        _viewModel.TogglePlayPauseCommand.Execute(null);
+                    }
+                }),
+                onStop: () => Dispatcher.Invoke(() =>
+                {
+                    if (_viewModel.StopStationCommand.CanExecute(null))
+                    {
+                        _viewModel.StopStationCommand.Execute(null);
+                    }
+                }),
+                onNextStation: () => Dispatcher.Invoke(() =>
+                {
+                    if (_viewModel.NextStationCommand.CanExecute(null))
+                    {
+                        _viewModel.NextStationCommand.Execute(null);
+                    }
+                }),
+                onPreviousStation: () => Dispatcher.Invoke(() =>
+                {
+                    if (_viewModel.PreviousStationCommand.CanExecute(null))
+                    {
+                        _viewModel.PreviousStationCommand.Execute(null);
+                    }
+                }),
+                onVolumeUp: () => Dispatcher.Invoke(() =>
+                {
+                    if (_viewModel.VolumeUpCommand.CanExecute(null))
+                    {
+                        _viewModel.VolumeUpCommand.Execute(null);
+                    }
+                }),
+                onVolumeDown: () => Dispatcher.Invoke(() =>
+                {
+                    if (_viewModel.VolumeDownCommand.CanExecute(null))
+                    {
+                        _viewModel.VolumeDownCommand.Execute(null);
+                    }
+                }),
+                onMute: () => Dispatcher.Invoke(() =>
+                {
+                    if (_viewModel.ToggleMuteCommand.CanExecute(null))
+                    {
+                        _viewModel.ToggleMuteCommand.Execute(null);
+                    }
+                })
+            );
+
+            System.Diagnostics.Debug.WriteLine("[MainWindow] Global hotkeys registered successfully");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainWindow] Failed to register global hotkeys: {ex.Message}");
+            // Don't show error to user - hotkeys are optional feature
         }
     }
 }

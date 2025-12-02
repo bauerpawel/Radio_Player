@@ -38,6 +38,9 @@
     <!-- UI Enhancements - Material Design -->
     <PackageReference Include="MaterialDesignThemes" Version="5.1.0" />
     <PackageReference Include="MaterialDesignColors" Version="3.1.0" />
+
+    <!-- Global Hotkeys -->
+    <PackageReference Include="NHotkey.Wpf" Version="3.0.0" />
   </ItemGroup>
 
   <ItemGroup>

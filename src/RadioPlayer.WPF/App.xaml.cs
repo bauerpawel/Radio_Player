@@ -136,6 +136,7 @@ public partial class App : Application
         services.AddSingleton<IStreamValidationService, StreamValidationService>();
         services.AddSingleton<IExportImportService, ExportImportService>();
         services.AddSingleton<IStationCacheService, StationCacheService>();
+        services.AddSingleton<IGlobalHotkeyService, GlobalHotkeyService>();
 
         // Register ViewModels
         services.AddTransient<MainViewModel>();
