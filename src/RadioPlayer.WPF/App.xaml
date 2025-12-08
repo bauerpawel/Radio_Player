@@ -23,6 +23,7 @@
             <converters:BoolToBufferingConverter x:Key="BoolToBufferingConverter"/>
             <converters:VolumeConverter x:Key="VolumeConverter"/>
             <converters:VolumePercentConverter x:Key="VolumePercentConverter"/>
+            <converters:FavoriteTooltipConverter x:Key="FavoriteTooltipConverter"/>
 
             <!-- Custom Color Scheme for Radio Player -->
             <SolidColorBrush x:Key="PrimaryBrush" Color="#673AB7"/>

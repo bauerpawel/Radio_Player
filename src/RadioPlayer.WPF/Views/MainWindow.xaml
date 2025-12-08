@@ -372,6 +372,37 @@
                                                     <TextBlock Text="{Binding Name}"
                                                               VerticalAlignment="Center"
                                                               FontWeight="Medium"/>
+
+                                                    <!-- Favorite button - toggles favorite status -->
+                                                    <Button Style="{StaticResource MaterialDesignIconButton}"
+                                                           Command="{Binding DataContext.ToggleFavoriteStationCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                                           CommandParameter="{Binding}"
+                                                           Width="24" Height="24"
+                                                           Padding="0"
+                                                           Margin="8,0,0,0"
+                                                           ToolTip="{Binding IsFavorite, Converter={StaticResource FavoriteTooltipConverter}}"
+                                                           VerticalAlignment="Center">
+                                                        <!-- Filled star for favorites -->
+                                                        <materialDesign:PackIcon Kind="Star"
+                                                                                Width="16" Height="16"
+                                                                                Foreground="#FFD700"
+                                                                                Visibility="{Binding IsFavorite, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                        <!-- Outline star for non-favorites -->
+                                                        <materialDesign:PackIcon Kind="StarOutline"
+                                                                                Width="16" Height="16"
+                                                                                Opacity="0.6"
+                                                                                Visibility="{Binding IsFavorite, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                                            <materialDesign:PackIcon.Style>
+                                                                <Style TargetType="materialDesign:PackIcon">
+                                                                    <Style.Triggers>
+                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                            <Setter Property="Opacity" Value="1.0"/>
+                                                                        </Trigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </materialDesign:PackIcon.Style>
+                                                        </materialDesign:PackIcon>
+                                                    </Button>
                                                 </StackPanel>
                                             </DataTemplate>
                                         </GridViewColumn.CellTemplate>

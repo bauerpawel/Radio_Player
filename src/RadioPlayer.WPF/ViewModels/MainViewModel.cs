@@ -603,6 +603,58 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Toggle favorite status for a specific station (used by station list favorite button)
+    /// </summary>
+    [RelayCommand]
+    private async Task ToggleFavoriteStationAsync(RadioStation? station)
+    {
+        if (_repository == null || station == null) return;
+
+        try
+        {
+            // Ensure station exists in local database before adding to favorites
+            if (station.Id == 0)
+            {
+                // Check if station already exists in database by UUID
+                var existingStation = await _repository.GetStationByUuidAsync(station.StationUuid);
+
+                if (existingStation != null)
+                {
+                    // Station exists, use its ID
+                    station.Id = existingStation.Id;
+                }
+                else
+                {
+                    // Station doesn't exist, add it to local database first
+                    var newId = await _repository.AddStationAsync(station);
+                    station.Id = newId;
+                }
+            }
+
+            // Now toggle favorite status
+            if (station.IsFavorite)
+            {
+                await _repository.RemoveFromFavoritesAsync(station.Id);
+                station.IsFavorite = false;
+                StatusMessage = $"Removed {station.Name} from favorites";
+            }
+            else
+            {
+                await _repository.AddToFavoritesAsync(station.Id);
+                station.IsFavorite = true;
+                StatusMessage = $"Added {station.Name} to favorites";
+            }
+
+            // Trigger property change notification to update UI
+            OnPropertyChanged(nameof(Stations));
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error updating favorite: {ex.Message}";
+        }
+    }
+
     [RelayCommand]
     private async Task LoadFavoritesAsync()
     {
