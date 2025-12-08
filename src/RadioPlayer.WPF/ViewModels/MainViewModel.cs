@@ -1422,6 +1422,146 @@ public partial class MainViewModel : ObservableObject
 
     #endregion
 
+    #region Context Menu Commands
+
+    /// <summary>
+    /// Play station from context menu
+    /// </summary>
+    [RelayCommand]
+    private async Task PlayStationContextMenuAsync(RadioStation? station)
+    {
+        if (station == null) return;
+
+        SelectedStation = station;
+        await PlayStationAsync();
+    }
+
+    /// <summary>
+    /// Add station to favorites from context menu
+    /// </summary>
+    [RelayCommand]
+    private async Task AddToFavoritesContextMenuAsync(RadioStation? station)
+    {
+        if (_repository == null || station == null || station.IsFavorite) return;
+
+        try
+        {
+            // Ensure station exists in local database
+            if (station.Id == 0)
+            {
+                var existingStation = await _repository.GetStationByUuidAsync(station.StationUuid);
+
+                if (existingStation != null)
+                {
+                    station.Id = existingStation.Id;
+                }
+                else
+                {
+                    var newId = await _repository.AddStationAsync(station);
+                    station.Id = newId;
+                }
+            }
+
+            await _repository.AddToFavoritesAsync(station.Id);
+            station.IsFavorite = true;
+            StatusMessage = $"Added {station.Name} to favorites";
+
+            // Refresh if we're in favorites view
+            if (_currentViewContext == "Favorites")
+            {
+                await LoadFavoritesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error adding to favorites: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Remove station from favorites from context menu
+    /// </summary>
+    [RelayCommand]
+    private async Task RemoveFromFavoritesContextMenuAsync(RadioStation? station)
+    {
+        if (_repository == null || station == null || !station.IsFavorite) return;
+
+        try
+        {
+            await _repository.RemoveFromFavoritesAsync(station.Id);
+            station.IsFavorite = false;
+            StatusMessage = $"Removed {station.Name} from favorites";
+
+            // Refresh if we're in favorites view
+            if (_currentViewContext == "Favorites")
+            {
+                await LoadFavoritesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error removing from favorites: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Copy station to custom stations (Moje stacje)
+    /// </summary>
+    [RelayCommand]
+    private async Task CopyToCustomStationsAsync(RadioStation? station)
+    {
+        if (_repository == null || _streamValidationService == null || station == null) return;
+
+        try
+        {
+            // Create a copy of the station as a custom station
+            var customStation = new RadioStation
+            {
+                StationUuid = Guid.NewGuid().ToString(), // Generate new UUID for the copy
+                Name = $"{station.Name} (Copy)",
+                UrlResolved = station.UrlResolved,
+                Codec = station.Codec,
+                Bitrate = station.Bitrate,
+                Country = station.Country,
+                CountryCode = station.CountryCode,
+                Language = station.Language,
+                Tags = station.Tags,
+                Homepage = station.Homepage,
+                Favicon = station.Favicon,
+                IsCustom = true // Mark as custom station
+            };
+
+            // Show edit dialog to allow user to modify the copied station
+            var dialog = new Views.AddCustomStationDialog(_streamValidationService, customStation);
+            var result = dialog.ShowDialog();
+
+            if (result == true && dialog.Station != null)
+            {
+                // Add station to database
+                dialog.Station.Id = await _repository.AddStationAsync(dialog.Station);
+
+                StatusMessage = $"Copied '{station.Name}' to My Stations as '{dialog.Station.Name}'";
+
+                // Reload custom stations if we're in that view
+                if (_currentViewContext == "CustomStations")
+                {
+                    await LoadCustomStationsAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error copying to custom stations: {ex.Message}";
+            System.Windows.MessageBox.Show(
+                $"Failed to copy station: {ex.Message}",
+                "Copy Error",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
+        }
+    }
+
+    #endregion
+
     #region Global Hotkey Commands
 
     /// <summary>

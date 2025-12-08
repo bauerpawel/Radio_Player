@@ -58,6 +58,14 @@
     "AddToFavorites": "Add to favorites"
   },
 
+  "ContextMenu": {
+    "Play": "Play",
+    "Stop": "Stop",
+    "AddToFavorites": "Add to Favorites",
+    "RemoveFromFavorites": "Remove from Favorites",
+    "CopyToMyStations": "Copy to My Stations"
+  },
+
   "Settings": {
     "Title": "Settings",
     "DebugLogging": "Debug Logging",
