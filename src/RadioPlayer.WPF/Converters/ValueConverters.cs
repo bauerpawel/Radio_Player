@@ -241,3 +241,23 @@ public class SortIndicatorConverter : IMultiValueConverter
         throw new NotImplementedException();
     }
 }
+
+/// <summary>
+/// Converts IsFavorite boolean to a tooltip string
+/// </summary>
+public class FavoriteTooltipConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool isFavorite)
+        {
+            return isFavorite ? "Remove from favorites" : "Add to favorites";
+        }
+        return "Add to favorites";
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
