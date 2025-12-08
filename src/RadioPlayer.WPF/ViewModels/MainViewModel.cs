@@ -111,6 +111,13 @@ public partial class MainViewModel : ObservableObject
 
     private float _volumeBeforeMute = 0.8f;
 
+    // Sorting properties
+    [ObservableProperty]
+    private string? _currentSortColumn;
+
+    [ObservableProperty]
+    private bool _isSortAscending = true;
+
     public MainViewModel()
     {
         // Constructor for design-time support
@@ -1257,6 +1264,59 @@ public partial class MainViewModel : ObservableObject
     {
         return stations.Where(s => !IsRussianStation(s)).ToList();
     }
+
+    #region Sorting
+
+    /// <summary>
+    /// Sort stations by the specified column
+    /// </summary>
+    /// <param name="columnName">Name of the column to sort by</param>
+    [RelayCommand]
+    private void SortStations(string columnName)
+    {
+        if (Stations == null || Stations.Count == 0)
+            return;
+
+        // Toggle sort direction if clicking the same column
+        if (CurrentSortColumn == columnName)
+        {
+            IsSortAscending = !IsSortAscending;
+        }
+        else
+        {
+            CurrentSortColumn = columnName;
+            IsSortAscending = true;
+        }
+
+        // Sort the stations based on column
+        var sortedStations = columnName switch
+        {
+            "Name" => IsSortAscending
+                ? Stations.OrderBy(s => s.Name).ToList()
+                : Stations.OrderByDescending(s => s.Name).ToList(),
+            "Country" => IsSortAscending
+                ? Stations.OrderBy(s => s.Country).ThenBy(s => s.Name).ToList()
+                : Stations.OrderByDescending(s => s.Country).ThenByDescending(s => s.Name).ToList(),
+            "Genre" => IsSortAscending
+                ? Stations.OrderBy(s => s.Tags).ThenBy(s => s.Name).ToList()
+                : Stations.OrderByDescending(s => s.Tags).ThenByDescending(s => s.Name).ToList(),
+            "Codec" => IsSortAscending
+                ? Stations.OrderBy(s => s.Codec).ThenBy(s => s.Bitrate).ThenBy(s => s.Name).ToList()
+                : Stations.OrderByDescending(s => s.Codec).ThenByDescending(s => s.Bitrate).ThenByDescending(s => s.Name).ToList(),
+            "Bitrate" => IsSortAscending
+                ? Stations.OrderBy(s => s.Bitrate).ThenBy(s => s.Name).ToList()
+                : Stations.OrderByDescending(s => s.Bitrate).ThenByDescending(s => s.Name).ToList(),
+            _ => Stations.ToList()
+        };
+
+        // Update the collection
+        Stations = new ObservableCollection<RadioStation>(sortedStations);
+        UpdateCurrentlyPlayingStationReference();
+
+        StatusMessage = $"Sorted by {columnName} ({(IsSortAscending ? "A-Z" : "Z-A")})";
+    }
+
+    #endregion
 
     #region Global Hotkey Commands
 

@@ -17,7 +17,9 @@
             <converters:InverseNullToVisibilityConverter x:Key="InverseNullToVisibilityConverter"/>
             <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
             <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
             <converters:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter"/>
+            <converters:SortIndicatorConverter x:Key="SortIndicatorConverter"/>
             <converters:BoolToBufferingConverter x:Key="BoolToBufferingConverter"/>
             <converters:VolumeConverter x:Key="VolumeConverter"/>
             <converters:VolumePercentConverter x:Key="VolumePercentConverter"/>
