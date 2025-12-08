@@ -171,6 +171,9 @@ public partial class MainViewModel : ObservableObject
 
         // Load cached stations on startup
         _ = LoadCachedStationsAsync();
+
+        // Load saved volume setting
+        _ = LoadVolumeSetting();
     }
 
     /// <summary>
@@ -702,6 +705,55 @@ public partial class MainViewModel : ObservableObject
         if (_radioPlayer != null)
         {
             _radioPlayer.Volume = value;
+        }
+
+        // Save volume to database (fire-and-forget to avoid blocking UI)
+        _ = SaveVolumeSetting(value);
+    }
+
+    /// <summary>
+    /// Load saved volume setting from database
+    /// </summary>
+    private async Task LoadVolumeSetting()
+    {
+        if (_repository == null) return;
+
+        try
+        {
+            var volumeStr = await _repository.GetSettingAsync("Volume");
+            if (!string.IsNullOrWhiteSpace(volumeStr) && float.TryParse(volumeStr, out var savedVolume))
+            {
+                // Validate volume is in valid range (0.0 to 1.0)
+                if (savedVolume >= 0f && savedVolume <= 1.0f)
+                {
+                    Volume = savedVolume;
+                    System.Diagnostics.Debug.WriteLine($"[MainViewModel] Loaded saved volume: {savedVolume:F2}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] Error loading volume setting: {ex.Message}");
+            // Use default volume if loading fails
+        }
+    }
+
+    /// <summary>
+    /// Save volume setting to database
+    /// </summary>
+    private async Task SaveVolumeSetting(float volume)
+    {
+        if (_repository == null) return;
+
+        try
+        {
+            await _repository.SetSettingAsync("Volume", volume.ToString("F2"));
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] Saved volume: {volume:F2}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] Error saving volume setting: {ex.Message}");
+            // Fail silently - not critical if volume save fails
         }
     }
 

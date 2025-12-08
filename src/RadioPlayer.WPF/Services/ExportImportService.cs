@@ -50,13 +50,21 @@ public class ExportImportService : IExportImportService
         };
 
         // Export settings
+        // Load saved volume from database, fallback to default if not found
+        var volumeStr = await _repository.GetSettingAsync("Volume");
+        var savedVolume = AppConstants.UI.DefaultVolume;
+        if (!string.IsNullOrWhiteSpace(volumeStr) && float.TryParse(volumeStr, out var vol))
+        {
+            savedVolume = vol;
+        }
+
         backupData.Settings = new BackupSettings
         {
             EnableLogging = AppConstants.Debug.EnableLogging,
             MinimizeToTray = AppConstants.UI.MinimizeToTray,
             BufferDurationSeconds = AppConstants.AudioBuffer.BufferDuration.TotalSeconds,
             PreBufferDurationSeconds = AppConstants.AudioBuffer.PreBufferDuration.TotalSeconds,
-            Volume = AppConstants.UI.DefaultVolume,
+            Volume = savedVolume,
             Language = await _repository.GetSettingAsync("Language")
         };
 
@@ -122,6 +130,12 @@ public class ExportImportService : IExportImportService
             if (!string.IsNullOrWhiteSpace(backupData.Settings.Language))
             {
                 await _repository.SetSettingAsync("Language", backupData.Settings.Language);
+            }
+
+            // Import volume setting (validate range 0.0 to 1.0)
+            if (backupData.Settings.Volume >= 0f && backupData.Settings.Volume <= 1.0f)
+            {
+                await _repository.SetSettingAsync("Volume", backupData.Settings.Volume.ToString("F2"));
             }
         }
 
