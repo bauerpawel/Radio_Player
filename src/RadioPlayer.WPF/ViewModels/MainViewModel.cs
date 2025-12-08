@@ -67,6 +67,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _countryFilter = string.Empty;
 
+    // Track current view context for search
+    private string _currentViewContext = "TopStations"; // TopStations, Favorites, CustomStations, Cached, SearchResults
+    private List<RadioStation> _allStationsForCurrentView = new();
+
     [ObservableProperty]
     private string _languageFilter = string.Empty;
 
@@ -239,6 +243,11 @@ public partial class MainViewModel : ObservableObject
             if (cachedStations.Count > 0)
             {
                 await UpdateFavoriteStatusAsync(cachedStations);
+
+                // Store for search context
+                _currentViewContext = "Cached";
+                _allStationsForCurrentView = new List<RadioStation>(cachedStations);
+
                 Stations = new ObservableCollection<RadioStation>(cachedStations);
                 UpdateCurrentlyPlayingStationReference();
 
@@ -293,6 +302,11 @@ public partial class MainViewModel : ObservableObject
                 }
 
                 await UpdateFavoriteStatusAsync(stations);
+
+                // Store for search context
+                _currentViewContext = "TopStations";
+                _allStationsForCurrentView = new List<RadioStation>(stations);
+
                 Stations = new ObservableCollection<RadioStation>(stations);
                 UpdateCurrentlyPlayingStationReference();
                 StatusMessage = $"Loaded {stations.Count} stations with filters";
@@ -311,6 +325,11 @@ public partial class MainViewModel : ObservableObject
                 }
 
                 await UpdateFavoriteStatusAsync(stations);
+
+                // Store for search context
+                _currentViewContext = "TopStations";
+                _allStationsForCurrentView = new List<RadioStation>(stations);
+
                 Stations = new ObservableCollection<RadioStation>(stations);
                 UpdateCurrentlyPlayingStationReference();
                 StatusMessage = $"Loaded {stations.Count} stations";
@@ -357,6 +376,46 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task SearchStationsAsync()
     {
+        // If search text is empty, restore the full list for current view
+        if (string.IsNullOrWhiteSpace(SearchText))
+        {
+            Stations = new ObservableCollection<RadioStation>(_allStationsForCurrentView);
+            UpdateCurrentlyPlayingStationReference();
+            StatusMessage = $"Showing all {_allStationsForCurrentView.Count} stations";
+            return;
+        }
+
+        // For local views (Favorites, CustomStations, Cached), perform local filtering
+        if (_currentViewContext == "Favorites" ||
+            _currentViewContext == "CustomStations" ||
+            _currentViewContext == "Cached")
+        {
+            try
+            {
+                StatusMessage = "Searching...";
+
+                // Perform local search on the current view's stations
+                var searchTerm = SearchText.ToLowerInvariant();
+                var filteredStations = _allStationsForCurrentView
+                    .Where(s =>
+                        (s.Name?.ToLowerInvariant().Contains(searchTerm) ?? false) ||
+                        (s.Country?.ToLowerInvariant().Contains(searchTerm) ?? false) ||
+                        (s.Tags?.ToLowerInvariant().Contains(searchTerm) ?? false) ||
+                        (s.Language?.ToLowerInvariant().Contains(searchTerm) ?? false))
+                    .ToList();
+
+                Stations = new ObservableCollection<RadioStation>(filteredStations);
+                UpdateCurrentlyPlayingStationReference();
+                StatusMessage = $"Found {filteredStations.Count} stations in {GetViewDisplayName()}";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error searching: {ex.Message}";
+            }
+            return;
+        }
+
+        // For TopStations or SearchResults views, perform API search
         if (_radioBrowserService == null) return;
 
         // Allow search with just filters, even without search text
@@ -393,6 +452,10 @@ public partial class MainViewModel : ObservableObject
             // Update favorite status for stations that exist in local database
             await UpdateFavoriteStatusAsync(stations);
 
+            // Store for search context
+            _currentViewContext = "SearchResults";
+            _allStationsForCurrentView = new List<RadioStation>(stations);
+
             Stations = new ObservableCollection<RadioStation>(stations);
             UpdateCurrentlyPlayingStationReference();
             StatusMessage = $"Found {stations.Count} stations";
@@ -400,6 +463,39 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Error searching: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Get user-friendly display name for the current view
+    /// </summary>
+    private string GetViewDisplayName()
+    {
+        return _currentViewContext switch
+        {
+            "Favorites" => "Favorites",
+            "CustomStations" => "Custom Stations",
+            "Cached" => "Cached Stations",
+            "TopStations" => "Top Stations",
+            "SearchResults" => "Search Results",
+            _ => "current view"
+        };
+    }
+
+    /// <summary>
+    /// Handle SearchText changes to restore full list when cleared
+    /// </summary>
+    partial void OnSearchTextChanged(string value)
+    {
+        // If search text is cleared and we're in a local view, restore the full list
+        if (string.IsNullOrWhiteSpace(value) &&
+            (_currentViewContext == "Favorites" ||
+             _currentViewContext == "CustomStations" ||
+             _currentViewContext == "Cached"))
+        {
+            Stations = new ObservableCollection<RadioStation>(_allStationsForCurrentView);
+            UpdateCurrentlyPlayingStationReference();
+            StatusMessage = $"Showing all {_allStationsForCurrentView.Count} stations";
         }
     }
 
@@ -519,6 +615,10 @@ public partial class MainViewModel : ObservableObject
 
             // Filter out Russian stations
             favorites = FilterOutRussianStations(favorites);
+
+            // Store for search context
+            _currentViewContext = "Favorites";
+            _allStationsForCurrentView = new List<RadioStation>(favorites);
 
             Stations = new ObservableCollection<RadioStation>(favorites);
             UpdateCurrentlyPlayingStationReference();
@@ -899,6 +999,10 @@ public partial class MainViewModel : ObservableObject
 
             var customStations = await _repository.GetCustomStationsAsync();
             await UpdateFavoriteStatusAsync(customStations);
+
+            // Store for search context
+            _currentViewContext = "CustomStations";
+            _allStationsForCurrentView = new List<RadioStation>(customStations);
 
             Stations = new ObservableCollection<RadioStation>(customStations);
             UpdateCurrentlyPlayingStationReference();
