@@ -185,3 +185,59 @@ public class InverseBooleanToVisibilityConverter : IValueConverter
         return true;
     }
 }
+
+/// <summary>
+/// Inverts a boolean value (true -> false, false -> true)
+/// </summary>
+public class InverseBooleanConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool boolValue)
+        {
+            return !boolValue;
+        }
+        return true;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool boolValue)
+        {
+            return !boolValue;
+        }
+        return false;
+    }
+}
+
+/// <summary>
+/// Multi-value converter for showing sort indicators (up/down arrows) on column headers
+/// Values: [0] = CurrentSortColumn (string), [1] = IsSortAscending (bool), [2] = ColumnName (string)
+/// Returns Visibility.Visible if CurrentSortColumn matches ColumnName and sort direction matches
+/// </summary>
+public class SortIndicatorConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        // Expected values: [0] = CurrentSortColumn, [1] = IsSortAscending (or inverted), [2] = ColumnName
+        if (values.Length != 3)
+            return Visibility.Collapsed;
+
+        var currentColumn = values[0] as string;
+        var shouldShow = values[1] is bool show && show;
+        var columnName = values[2] as string;
+
+        // Show arrow only if this is the current sort column and direction matches
+        if (string.Equals(currentColumn, columnName, StringComparison.OrdinalIgnoreCase) && shouldShow)
+        {
+            return Visibility.Visible;
+        }
+
+        return Visibility.Collapsed;
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}

@@ -270,7 +270,43 @@
                                  MouseDoubleClick="StationsList_MouseDoubleClick">
                             <ListView.View>
                                 <GridView>
-                                    <GridViewColumn Header="{helpers:Translate StationList.Headers.Station}" Width="280">
+                                    <GridViewColumn Width="280">
+                                        <GridViewColumn.Header>
+                                            <Button Command="{Binding SortStationsCommand}"
+                                                    CommandParameter="Name"
+                                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                                    Padding="8,4"
+                                                    HorizontalContentAlignment="Left">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{helpers:Translate StationList.Headers.Station}"
+                                                              VerticalAlignment="Center"/>
+                                                    <materialDesign:PackIcon Kind="ChevronUp"
+                                                                            Width="14" Height="14"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="4,0,0,0">
+                                                        <materialDesign:PackIcon.Visibility>
+                                                            <MultiBinding Converter="{StaticResource SortIndicatorConverter}">
+                                                                <Binding Path="CurrentSortColumn"/>
+                                                                <Binding Path="IsSortAscending"/>
+                                                                <Binding Source="Name"/>
+                                                            </MultiBinding>
+                                                        </materialDesign:PackIcon.Visibility>
+                                                    </materialDesign:PackIcon>
+                                                    <materialDesign:PackIcon Kind="ChevronDown"
+                                                                            Width="14" Height="14"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="4,0,0,0">
+                                                        <materialDesign:PackIcon.Visibility>
+                                                            <MultiBinding Converter="{StaticResource SortIndicatorConverter}">
+                                                                <Binding Path="CurrentSortColumn"/>
+                                                                <Binding Path="IsSortAscending" Converter="{StaticResource InverseBooleanConverter}"/>
+                                                                <Binding Source="Name"/>
+                                                            </MultiBinding>
+                                                        </materialDesign:PackIcon.Visibility>
+                                                    </materialDesign:PackIcon>
+                                                </StackPanel>
+                                            </Button>
+                                        </GridViewColumn.Header>
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
@@ -300,7 +336,43 @@
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
 
-                                    <GridViewColumn Header="{helpers:Translate StationList.Headers.Country}" Width="140">
+                                    <GridViewColumn Width="140">
+                                        <GridViewColumn.Header>
+                                            <Button Command="{Binding SortStationsCommand}"
+                                                    CommandParameter="Country"
+                                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                                    Padding="8,4"
+                                                    HorizontalContentAlignment="Left">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{helpers:Translate StationList.Headers.Country}"
+                                                              VerticalAlignment="Center"/>
+                                                    <materialDesign:PackIcon Kind="ChevronUp"
+                                                                            Width="14" Height="14"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="4,0,0,0">
+                                                        <materialDesign:PackIcon.Visibility>
+                                                            <MultiBinding Converter="{StaticResource SortIndicatorConverter}">
+                                                                <Binding Path="CurrentSortColumn"/>
+                                                                <Binding Path="IsSortAscending"/>
+                                                                <Binding Source="Country"/>
+                                                            </MultiBinding>
+                                                        </materialDesign:PackIcon.Visibility>
+                                                    </materialDesign:PackIcon>
+                                                    <materialDesign:PackIcon Kind="ChevronDown"
+                                                                            Width="14" Height="14"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="4,0,0,0">
+                                                        <materialDesign:PackIcon.Visibility>
+                                                            <MultiBinding Converter="{StaticResource SortIndicatorConverter}">
+                                                                <Binding Path="CurrentSortColumn"/>
+                                                                <Binding Path="IsSortAscending" Converter="{StaticResource InverseBooleanConverter}"/>
+                                                                <Binding Source="Country"/>
+                                                            </MultiBinding>
+                                                        </materialDesign:PackIcon.Visibility>
+                                                    </materialDesign:PackIcon>
+                                                </StackPanel>
+                                            </Button>
+                                        </GridViewColumn.Header>
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
@@ -315,9 +387,87 @@
                                         </GridViewColumn.CellTemplate>
                                     </GridViewColumn>
 
-                                    <GridViewColumn Header="{helpers:Translate StationList.Headers.Genre}" Width="160" DisplayMemberBinding="{Binding Tags}"/>
+                                    <GridViewColumn Width="160">
+                                        <GridViewColumn.Header>
+                                            <Button Command="{Binding SortStationsCommand}"
+                                                    CommandParameter="Genre"
+                                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                                    Padding="8,4"
+                                                    HorizontalContentAlignment="Left">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{helpers:Translate StationList.Headers.Genre}"
+                                                              VerticalAlignment="Center"/>
+                                                    <materialDesign:PackIcon Kind="ChevronUp"
+                                                                            Width="14" Height="14"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="4,0,0,0">
+                                                        <materialDesign:PackIcon.Visibility>
+                                                            <MultiBinding Converter="{StaticResource SortIndicatorConverter}">
+                                                                <Binding Path="CurrentSortColumn"/>
+                                                                <Binding Path="IsSortAscending"/>
+                                                                <Binding Source="Genre"/>
+                                                            </MultiBinding>
+                                                        </materialDesign:PackIcon.Visibility>
+                                                    </materialDesign:PackIcon>
+                                                    <materialDesign:PackIcon Kind="ChevronDown"
+                                                                            Width="14" Height="14"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="4,0,0,0">
+                                                        <materialDesign:PackIcon.Visibility>
+                                                            <MultiBinding Converter="{StaticResource SortIndicatorConverter}">
+                                                                <Binding Path="CurrentSortColumn"/>
+                                                                <Binding Path="IsSortAscending" Converter="{StaticResource InverseBooleanConverter}"/>
+                                                                <Binding Source="Genre"/>
+                                                            </MultiBinding>
+                                                        </materialDesign:PackIcon.Visibility>
+                                                    </materialDesign:PackIcon>
+                                                </StackPanel>
+                                            </Button>
+                                        </GridViewColumn.Header>
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Tags}" VerticalAlignment="Center"/>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
 
-                                    <GridViewColumn Header="{helpers:Translate StationList.Headers.Quality}" Width="120">
+                                    <GridViewColumn Width="120">
+                                        <GridViewColumn.Header>
+                                            <Button Command="{Binding SortStationsCommand}"
+                                                    CommandParameter="Codec"
+                                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                                    Padding="8,4"
+                                                    HorizontalContentAlignment="Left">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{helpers:Translate StationList.Headers.Quality}"
+                                                              VerticalAlignment="Center"/>
+                                                    <materialDesign:PackIcon Kind="ChevronUp"
+                                                                            Width="14" Height="14"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="4,0,0,0">
+                                                        <materialDesign:PackIcon.Visibility>
+                                                            <MultiBinding Converter="{StaticResource SortIndicatorConverter}">
+                                                                <Binding Path="CurrentSortColumn"/>
+                                                                <Binding Path="IsSortAscending"/>
+                                                                <Binding Source="Codec"/>
+                                                            </MultiBinding>
+                                                        </materialDesign:PackIcon.Visibility>
+                                                    </materialDesign:PackIcon>
+                                                    <materialDesign:PackIcon Kind="ChevronDown"
+                                                                            Width="14" Height="14"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="4,0,0,0">
+                                                        <materialDesign:PackIcon.Visibility>
+                                                            <MultiBinding Converter="{StaticResource SortIndicatorConverter}">
+                                                                <Binding Path="CurrentSortColumn"/>
+                                                                <Binding Path="IsSortAscending" Converter="{StaticResource InverseBooleanConverter}"/>
+                                                                <Binding Source="Codec"/>
+                                                            </MultiBinding>
+                                                        </materialDesign:PackIcon.Visibility>
+                                                    </materialDesign:PackIcon>
+                                                </StackPanel>
+                                            </Button>
+                                        </GridViewColumn.Header>
                                         <GridViewColumn.CellTemplate>
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
