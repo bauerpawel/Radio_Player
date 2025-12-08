@@ -268,6 +268,47 @@
                                  SelectedItem="{Binding SelectedStation}"
                                  Margin="8"
                                  MouseDoubleClick="StationsList_MouseDoubleClick">
+                            <!-- Context Menu for right-click on stations -->
+                            <ListView.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="{helpers:Translate ContextMenu.Play}"
+                                             Command="{Binding PlayStationContextMenuCommand}"
+                                             CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                        <MenuItem.Icon>
+                                            <materialDesign:PackIcon Kind="Play" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="{helpers:Translate ContextMenu.Stop}"
+                                             Command="{Binding StopStationCommand}">
+                                        <MenuItem.Icon>
+                                            <materialDesign:PackIcon Kind="Stop" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator />
+                                    <MenuItem Header="{helpers:Translate ContextMenu.AddToFavorites}"
+                                             Command="{Binding AddToFavoritesContextMenuCommand}"
+                                             CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                        <MenuItem.Icon>
+                                            <materialDesign:PackIcon Kind="Star" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="{helpers:Translate ContextMenu.RemoveFromFavorites}"
+                                             Command="{Binding RemoveFromFavoritesContextMenuCommand}"
+                                             CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                        <MenuItem.Icon>
+                                            <materialDesign:PackIcon Kind="StarOutline" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator />
+                                    <MenuItem Header="{helpers:Translate ContextMenu.CopyToMyStations}"
+                                             Command="{Binding CopyToCustomStationsCommand}"
+                                             CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                        <MenuItem.Icon>
+                                            <materialDesign:PackIcon Kind="ContentCopy" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </ContextMenu>
+                            </ListView.ContextMenu>
                             <ListView.View>
                                 <GridView>
                                     <GridViewColumn Width="280">

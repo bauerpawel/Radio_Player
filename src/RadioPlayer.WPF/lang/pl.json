@@ -58,6 +58,14 @@
     "AddToFavorites": "Dodaj do ulubionych"
   },
 
+  "ContextMenu": {
+    "Play": "Odtwórz",
+    "Stop": "Zatrzymaj",
+    "AddToFavorites": "Dodaj do ulubionych",
+    "RemoveFromFavorites": "Usuń z ulubionych",
+    "CopyToMyStations": "Kopiuj do Moje stacje"
+  },
+
   "Settings": {
     "Title": "Ustawienia",
     "DebugLogging": "Logowanie debugowania",
