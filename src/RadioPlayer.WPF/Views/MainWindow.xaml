@@ -616,19 +616,6 @@
                             <materialDesign:PackIcon Kind="Stop" Width="24" Height="24"/>
                         </Button>
 
-                        <ToggleButton Style="{StaticResource MaterialDesignActionToggleButton}"
-                                     Command="{Binding ToggleFavoriteCommand}"
-                                     IsEnabled="{Binding SelectedStation, Converter={StaticResource NullToBooleanConverter}}"
-                                     Width="40" Height="40"
-                                     ToolTip="{helpers:Translate PlayerControls.AddToFavorites}">
-                            <ToggleButton.Content>
-                                <materialDesign:PackIcon Kind="StarOutline" Width="24" Height="24"/>
-                            </ToggleButton.Content>
-                            <materialDesign:ToggleButtonAssist.OnContent>
-                                <materialDesign:PackIcon Kind="Star" Width="24" Height="24"/>
-                            </materialDesign:ToggleButtonAssist.OnContent>
-                        </ToggleButton>
-
                         <!-- Recording Controls -->
                         <Border Width="1"
                                 Height="40"
