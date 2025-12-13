@@ -32,14 +32,18 @@ A modern desktop radio player built with .NET 10 and WPF, providing access to 51
 - ✅ **Station logos** - display station favicon/logo in player controls
 - ✅ **Listening history** - track what you've listened to with duration tracking
 - ✅ **Search and filter** - case-insensitive search across all fields
+- ✅ **Column sorting** - click column headers to sort by name, country, codec, bitrate, or votes
+- ✅ **Station context menu** - right-click for quick actions (play, favorite, copy, details)
+- ✅ **Favorite button in list** - quick heart icon toggle for each station
 
 ### Player Controls
-- ✅ **Volume control** with mute support
+- ✅ **Volume control** with mute support and persistence between sessions
 - ✅ **Play/Stop controls** with status indicators
 - ✅ **Buffering visualization** - see real-time buffer status
 - ✅ **Now Playing display** - shows current track with station logo
 - ✅ **Global hotkeys** - system-wide keyboard shortcuts that work even when minimized
 - ✅ **Playback time display** - visual duration tracking in HH:MM:SS format
+- ✅ **Volume persistence** - volume level saved and restored between sessions
 
 ### Recording
 - ✅ **Stream recording** - record currently playing radio to file
@@ -491,10 +495,10 @@ dotnet run --project src/RadioPlayer.WPF
 ### Project Statistics
 
 - **Total Files**: 50+ files
-- **Lines of Code**: ~5,500 lines
+- **Lines of Code**: ~10,000 lines
 - **NuGet Packages**: 10 packages
 - **Architecture**: Clean MVVM with DI
-- **Version**: 1.0
+- **Version**: 1.5
 
 ### Adding New Language Support
 
@@ -680,14 +684,18 @@ Nowoczesny odtwarzacz radia internetowego zbudowany w .NET 10 i WPF, zapewniają
 - ✅ **Logo stacji** - wyświetlanie favicon/logo stacji w kontrolkach odtwarzacza
 - ✅ **Historia odtwarzania** - śledź co słuchałeś z czasem trwania
 - ✅ **Wyszukiwanie i filtrowanie** - wyszukiwanie bez rozróżniania wielkości liter
+- ✅ **Sortowanie kolumn** - kliknij nagłówki kolumn aby sortować według nazwy, kraju, kodeka, bitrate lub głosów
+- ✅ **Menu kontekstowe stacji** - kliknij prawym przyciskiem dla szybkich akcji (odtwórz, ulubione, kopiuj, szczegóły)
+- ✅ **Przycisk ulubionych na liście** - szybki przełącznik serca przy każdej stacji
 
 ### Kontrolki Odtwarzacza
-- ✅ **Kontrola głośności** z obsługą wyciszenia
+- ✅ **Kontrola głośności** z obsługą wyciszenia i zapamiętywaniem między sesjami
 - ✅ **Kontrolki Play/Stop** ze wskaźnikami statusu
 - ✅ **Wizualizacja buforowania** - zobacz status bufora w czasie rzeczywistym
 - ✅ **Wyświetlanie "Teraz odtwarzane"** - pokazuje bieżący utwór z logo stacji
 - ✅ **Globalne skróty klawiszowe** - systemowe skróty działające nawet przy zminimalizowanej aplikacji
 - ✅ **Wyświetlanie czasu odtwarzania** - wizualne śledzenie czasu w formacie HH:MM:SS
+- ✅ **Zapamiętywanie głośności** - poziom głośności zapisywany i przywracany między sesjami
 
 ### Dodatkowe Funkcje
 - ✅ **Integracja z zasobnikiem systemowym** - minimalizacja do zasobnika (opcjonalnie w ustawieniach)
