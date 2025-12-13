@@ -74,6 +74,25 @@ public class HotkeyConfiguration
     }
 
     /// <summary>
+    /// Gets all default hotkey configurations
+    /// </summary>
+    public static Dictionary<string, HotkeyConfiguration> GetDefaults()
+    {
+        var defaults = new Dictionary<string, HotkeyConfiguration>
+        {
+            ["PlayPause"] = CreateDefault("PlayPause", Key.P, ModifierKeys.Control | ModifierKeys.Shift, "Play/Pause"),
+            ["Stop"] = CreateDefault("Stop", Key.S, ModifierKeys.Control | ModifierKeys.Shift, "Stop"),
+            ["NextStation"] = CreateDefault("NextStation", Key.Right, ModifierKeys.Control | ModifierKeys.Shift, "Next Station"),
+            ["PreviousStation"] = CreateDefault("PreviousStation", Key.Left, ModifierKeys.Control | ModifierKeys.Shift, "Previous Station"),
+            ["VolumeUp"] = CreateDefault("VolumeUp", Key.Up, ModifierKeys.Control | ModifierKeys.Shift, "Volume Up"),
+            ["VolumeDown"] = CreateDefault("VolumeDown", Key.Down, ModifierKeys.Control | ModifierKeys.Shift, "Volume Down"),
+            ["Mute"] = CreateDefault("Mute", Key.M, ModifierKeys.Control | ModifierKeys.Shift, "Mute/Unmute")
+        };
+
+        return defaults;
+    }
+
+    /// <summary>
     /// Converts the hotkey to a serializable string format for database storage
     /// Format: "ActionId|Key|Modifiers|IsEnabled|DisplayName"
     /// </summary>
