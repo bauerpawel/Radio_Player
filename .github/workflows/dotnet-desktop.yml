@@ -61,12 +61,20 @@ jobs:
           name: RadioPlayer-win-x64
           path: artifact
 
+      - name: Create ZIP archive
+        run: |
+          $version = "${{ github.event.inputs.tag_name || github.ref_name }}".TrimStart('v')
+          $zipName = "RadioPlayer-$version-win-x64.zip"
+          Compress-Archive -Path artifact/* -DestinationPath $zipName
+          Write-Host "Created archive: $zipName"
+        shell: pwsh
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
           files: |
-            artifact/RadioPlayer.exe
+            RadioPlayer-*.zip
           draft: false
           prerelease: false
           generate_release_notes: true
