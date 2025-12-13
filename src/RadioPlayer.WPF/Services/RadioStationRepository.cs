@@ -853,23 +853,14 @@ public class RadioStationRepository : IRadioStationRepository
     {
         var hotkeys = new Dictionary<string, HotkeyConfiguration>();
 
-        // Define default hotkeys
-        var defaultHotkeys = new[]
-        {
-            HotkeyConfiguration.CreateDefault("PlayPause", Key.P, ModifierKeys.Control | ModifierKeys.Shift, "Play/Pause"),
-            HotkeyConfiguration.CreateDefault("Stop", Key.S, ModifierKeys.Control | ModifierKeys.Shift, "Stop"),
-            HotkeyConfiguration.CreateDefault("NextStation", Key.Right, ModifierKeys.Control | ModifierKeys.Shift, "Next Station"),
-            HotkeyConfiguration.CreateDefault("PreviousStation", Key.Left, ModifierKeys.Control | ModifierKeys.Shift, "Previous Station"),
-            HotkeyConfiguration.CreateDefault("VolumeUp", Key.Up, ModifierKeys.Control | ModifierKeys.Shift, "Volume Up"),
-            HotkeyConfiguration.CreateDefault("VolumeDown", Key.Down, ModifierKeys.Control | ModifierKeys.Shift, "Volume Down"),
-            HotkeyConfiguration.CreateDefault("Mute", Key.M, ModifierKeys.Control | ModifierKeys.Shift, "Mute/Unmute")
-        };
+        // Get default hotkey configurations
+        var defaults = HotkeyConfiguration.GetDefaults();
 
         // Load saved hotkeys or use defaults
-        foreach (var defaultHotkey in defaultHotkeys)
+        foreach (var (actionId, defaultConfig) in defaults)
         {
-            var savedHotkey = await GetHotkeyAsync(defaultHotkey.ActionId);
-            hotkeys[defaultHotkey.ActionId] = savedHotkey ?? defaultHotkey;
+            var savedHotkey = await GetHotkeyAsync(actionId);
+            hotkeys[actionId] = savedHotkey ?? defaultConfig;
         }
 
         return hotkeys;

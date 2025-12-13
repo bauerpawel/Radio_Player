@@ -323,33 +323,27 @@ public partial class SettingsDialog : Window
         }
     }
 
-    private async void ResetHotkeyButton_Click(object sender, RoutedEventArgs e)
+    private void ResetHotkeyButton_Click(object sender, RoutedEventArgs e)
     {
         var button = sender as Button;
         if (button == null || button.Tag == null)
             return;
 
         var actionId = button.Tag.ToString();
-        if (string.IsNullOrEmpty(actionId) || _repository == null)
+        if (string.IsNullOrEmpty(actionId))
             return;
 
-        // Get default hotkey configuration
-        var allDefaults = await _repository.GetAllHotkeysAsync();
-        if (allDefaults.TryGetValue(actionId, out var defaultConfig))
+        // Get default hotkey configurations
+        var defaults = HotkeyConfiguration.GetDefaults();
+        if (defaults.TryGetValue(actionId, out var defaultConfig))
         {
-            // Reset to default by creating a new default configuration
-            var resetConfig = HotkeyConfiguration.CreateDefault(
-                defaultConfig.ActionId,
-                defaultConfig.Key,
-                defaultConfig.Modifiers,
-                defaultConfig.DisplayName);
-
-            _hotkeyConfigurations[actionId] = resetConfig;
+            // Reset to default configuration
+            _hotkeyConfigurations[actionId] = defaultConfig;
 
             // Update UI
             if (_hotkeyTextBoxes.TryGetValue(actionId, out var textBox))
             {
-                textBox.Text = resetConfig.HotkeyString;
+                textBox.Text = defaultConfig.HotkeyString;
             }
         }
     }
