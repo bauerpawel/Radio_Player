@@ -95,6 +95,19 @@
       "English": "English",
       "German": "German"
     },
+    "GlobalHotkeys": "Global Hotkeys",
+    "EnableGlobalHotkeys": "Enable global hotkeys (keyboard shortcuts)",
+    "GlobalHotkeysDescription": "System-wide keyboard shortcuts that work even when the application is minimized. Click in a text box and press your desired key combination.",
+    "Hotkeys": {
+      "PlayPause": "Play/Pause",
+      "Stop": "Stop",
+      "NextStation": "Next Station",
+      "PreviousStation": "Previous Station",
+      "VolumeUp": "Volume Up",
+      "VolumeDown": "Volume Down",
+      "Mute": "Mute/Unmute"
+    },
+    "Reset": "Reset",
     "BackupRestore": "Backup & Restore",
     "BackupRestoreDescription": "Export your favorites and settings to a JSON file, or import from a previous backup.",
     "ExportBackup": "Export Backup",
@@ -236,6 +249,8 @@
     "CacheUpdateFailed": "Cache update failed: {0}",
     "LoadingCachedStations": "Loading cached stations...",
     "LoadedCachedStations": "Loaded {0} cached stations {1}",
-    "NoCachedStations": "No cached stations available"
+    "NoCachedStations": "No cached stations available",
+    "HotkeyRequiresModifier": "Please use at least one modifier key (Ctrl, Alt, Shift, or Win)",
+    "InvalidHotkey": "Invalid Hotkey"
   }
 }

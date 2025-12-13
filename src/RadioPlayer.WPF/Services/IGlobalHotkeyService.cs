@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using RadioPlayer.WPF.Models;
 
 namespace RadioPlayer.WPF.Services;
 
@@ -25,6 +27,15 @@ public interface IGlobalHotkeyService : IDisposable
         Action onVolumeUp,
         Action onVolumeDown,
         Action onMute);
+
+    /// <summary>
+    /// Registers global hotkeys with custom configurations
+    /// </summary>
+    /// <param name="hotkeyConfigurations">Dictionary of action IDs to hotkey configurations</param>
+    /// <param name="callbacks">Dictionary of action IDs to callback actions</param>
+    void RegisterHotkeysWithConfigurations(
+        Dictionary<string, HotkeyConfiguration> hotkeyConfigurations,
+        Dictionary<string, Action> callbacks);
 
     /// <summary>
     /// Unregisters all global hotkeys

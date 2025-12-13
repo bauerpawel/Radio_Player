@@ -95,6 +95,19 @@
       "English": "Angielski",
       "German": "Niemiecki"
     },
+    "GlobalHotkeys": "Globalne skróty klawiszowe",
+    "EnableGlobalHotkeys": "Włącz globalne skróty klawiszowe",
+    "GlobalHotkeysDescription": "Systemowe skróty klawiszowe działające nawet gdy aplikacja jest zminimalizowana. Kliknij w pole tekstowe i naciśnij wybraną kombinację klawiszy.",
+    "Hotkeys": {
+      "PlayPause": "Odtwórz/Pauza",
+      "Stop": "Zatrzymaj",
+      "NextStation": "Następna stacja",
+      "PreviousStation": "Poprzednia stacja",
+      "VolumeUp": "Głośniej",
+      "VolumeDown": "Ciszej",
+      "Mute": "Wycisz/Przywróć dźwięk"
+    },
+    "Reset": "Resetuj",
     "BackupRestore": "Kopia zapasowa i przywracanie",
     "BackupRestoreDescription": "Eksportuj swoje ulubione i ustawienia do pliku JSON lub zaimportuj z poprzedniej kopii zapasowej.",
     "ExportBackup": "Eksportuj kopię zapasową",
@@ -236,6 +249,8 @@
     "CacheUpdateFailed": "Aktualizacja pamięci podręcznej nie powiodła się: {0}",
     "LoadingCachedStations": "Ładowanie stacji z pamięci podręcznej...",
     "LoadedCachedStations": "Załadowano {0} stacji z pamięci podręcznej {1}",
-    "NoCachedStations": "Brak stacji w pamięci podręcznej"
+    "NoCachedStations": "Brak stacji w pamięci podręcznej",
+    "HotkeyRequiresModifier": "Proszę użyć przynajmniej jednego klawisza modyfikującego (Ctrl, Alt, Shift lub Win)",
+    "InvalidHotkey": "Nieprawidłowy skrót klawiszowy"
   }
 }

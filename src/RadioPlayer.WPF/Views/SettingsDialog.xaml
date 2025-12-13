@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:helpers="clr-namespace:RadioPlayer.WPF.Helpers"
-        Title="{helpers:Translate Settings.Title}" Height="400" Width="500"
+        Title="{helpers:Translate Settings.Title}" Height="700" Width="550"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource MaterialDesignPaper}"
         FontFamily="{DynamicResource MaterialDesignFont}">
@@ -48,6 +48,92 @@
                 </ComboBox>
                 <TextBlock Text="{helpers:Translate Settings.LanguageDescription}"
                           TextWrapping="Wrap" FontSize="11" Foreground="Gray" Margin="0,0,0,0"/>
+
+                <Separator Margin="0,20"/>
+
+                <!-- Global Hotkeys -->
+                <TextBlock Text="{helpers:Translate Settings.GlobalHotkeys}" FontWeight="Bold" FontSize="14" Margin="0,10,0,10"/>
+                <CheckBox x:Name="HotkeysEnabledCheckBox"
+                         Content="{helpers:Translate Settings.EnableGlobalHotkeys}"
+                         Margin="0,0,0,10"
+                         Checked="HotkeysEnabledCheckBox_Changed"
+                         Unchecked="HotkeysEnabledCheckBox_Changed"/>
+                <TextBlock Text="{helpers:Translate Settings.GlobalHotkeysDescription}"
+                          TextWrapping="Wrap" FontSize="11" Foreground="Gray" Margin="0,0,0,10"/>
+
+                <!-- Hotkey Configuration Grid -->
+                <Grid x:Name="HotkeyConfigurationGrid" Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Play/Pause -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{helpers:Translate Settings.Hotkeys.PlayPause}" VerticalAlignment="Center" Margin="0,5"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="PlayPauseHotkeyTextBox" Width="150" Margin="5" IsReadOnly="True"
+                             PreviewKeyDown="HotkeyTextBox_PreviewKeyDown" Tag="PlayPause"/>
+                    <Button Grid.Row="0" Grid.Column="2" Content="{helpers:Translate Settings.Reset}"
+                            Click="ResetHotkeyButton_Click" Tag="PlayPause" Margin="5"
+                            Style="{StaticResource MaterialDesignFlatButton}"/>
+
+                    <!-- Stop -->
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{helpers:Translate Settings.Hotkeys.Stop}" VerticalAlignment="Center" Margin="0,5"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="StopHotkeyTextBox" Width="150" Margin="5" IsReadOnly="True"
+                             PreviewKeyDown="HotkeyTextBox_PreviewKeyDown" Tag="Stop"/>
+                    <Button Grid.Row="1" Grid.Column="2" Content="{helpers:Translate Settings.Reset}"
+                            Click="ResetHotkeyButton_Click" Tag="Stop" Margin="5"
+                            Style="{StaticResource MaterialDesignFlatButton}"/>
+
+                    <!-- Next Station -->
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{helpers:Translate Settings.Hotkeys.NextStation}" VerticalAlignment="Center" Margin="0,5"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="NextStationHotkeyTextBox" Width="150" Margin="5" IsReadOnly="True"
+                             PreviewKeyDown="HotkeyTextBox_PreviewKeyDown" Tag="NextStation"/>
+                    <Button Grid.Row="2" Grid.Column="2" Content="{helpers:Translate Settings.Reset}"
+                            Click="ResetHotkeyButton_Click" Tag="NextStation" Margin="5"
+                            Style="{StaticResource MaterialDesignFlatButton}"/>
+
+                    <!-- Previous Station -->
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{helpers:Translate Settings.Hotkeys.PreviousStation}" VerticalAlignment="Center" Margin="0,5"/>
+                    <TextBox Grid.Row="3" Grid.Column="1" x:Name="PreviousStationHotkeyTextBox" Width="150" Margin="5" IsReadOnly="True"
+                             PreviewKeyDown="HotkeyTextBox_PreviewKeyDown" Tag="PreviousStation"/>
+                    <Button Grid.Row="3" Grid.Column="2" Content="{helpers:Translate Settings.Reset}"
+                            Click="ResetHotkeyButton_Click" Tag="PreviousStation" Margin="5"
+                            Style="{StaticResource MaterialDesignFlatButton}"/>
+
+                    <!-- Volume Up -->
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="{helpers:Translate Settings.Hotkeys.VolumeUp}" VerticalAlignment="Center" Margin="0,5"/>
+                    <TextBox Grid.Row="4" Grid.Column="1" x:Name="VolumeUpHotkeyTextBox" Width="150" Margin="5" IsReadOnly="True"
+                             PreviewKeyDown="HotkeyTextBox_PreviewKeyDown" Tag="VolumeUp"/>
+                    <Button Grid.Row="4" Grid.Column="2" Content="{helpers:Translate Settings.Reset}"
+                            Click="ResetHotkeyButton_Click" Tag="VolumeUp" Margin="5"
+                            Style="{StaticResource MaterialDesignFlatButton}"/>
+
+                    <!-- Volume Down -->
+                    <TextBlock Grid.Row="5" Grid.Column="0" Text="{helpers:Translate Settings.Hotkeys.VolumeDown}" VerticalAlignment="Center" Margin="0,5"/>
+                    <TextBox Grid.Row="5" Grid.Column="1" x:Name="VolumeDownHotkeyTextBox" Width="150" Margin="5" IsReadOnly="True"
+                             PreviewKeyDown="HotkeyTextBox_PreviewKeyDown" Tag="VolumeDown"/>
+                    <Button Grid.Row="5" Grid.Column="2" Content="{helpers:Translate Settings.Reset}"
+                            Click="ResetHotkeyButton_Click" Tag="VolumeDown" Margin="5"
+                            Style="{StaticResource MaterialDesignFlatButton}"/>
+
+                    <!-- Mute -->
+                    <TextBlock Grid.Row="6" Grid.Column="0" Text="{helpers:Translate Settings.Hotkeys.Mute}" VerticalAlignment="Center" Margin="0,5"/>
+                    <TextBox Grid.Row="6" Grid.Column="1" x:Name="MuteHotkeyTextBox" Width="150" Margin="5" IsReadOnly="True"
+                             PreviewKeyDown="HotkeyTextBox_PreviewKeyDown" Tag="Mute"/>
+                    <Button Grid.Row="6" Grid.Column="2" Content="{helpers:Translate Settings.Reset}"
+                            Click="ResetHotkeyButton_Click" Tag="Mute" Margin="5"
+                            Style="{StaticResource MaterialDesignFlatButton}"/>
+                </Grid>
 
                 <Separator Margin="0,20"/>
 

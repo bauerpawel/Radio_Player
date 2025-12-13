@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using Microsoft.Data.Sqlite;
 using RadioPlayer.WPF.Helpers;
 using RadioPlayer.WPF.Models;
@@ -814,6 +815,64 @@ public class RadioStationRepository : IRadioStationRepository
         });
 
         await SetSettingAsync("LastCacheUpdate", string.Empty);
+    }
+
+    #endregion
+
+    #region Hotkey Settings
+
+    public async Task<HotkeyConfiguration?> GetHotkeyAsync(string actionId)
+    {
+        var storageKey = $"Hotkey_{actionId}";
+        var storageString = await GetSettingAsync(storageKey);
+        return HotkeyConfiguration.FromStorageString(storageString ?? string.Empty);
+    }
+
+    public async Task SetHotkeyAsync(HotkeyConfiguration hotkey)
+    {
+        var storageKey = $"Hotkey_{hotkey.ActionId}";
+        var storageString = hotkey.ToStorageString();
+        await SetSettingAsync(storageKey, storageString);
+    }
+
+    public async Task<bool> GetHotkeysEnabledAsync()
+    {
+        var setting = await GetSettingAsync("HotkeysEnabled");
+        if (string.IsNullOrWhiteSpace(setting))
+            return true; // Default to enabled
+
+        return bool.TryParse(setting, out var enabled) && enabled;
+    }
+
+    public async Task SetHotkeysEnabledAsync(bool enabled)
+    {
+        await SetSettingAsync("HotkeysEnabled", enabled.ToString());
+    }
+
+    public async Task<Dictionary<string, HotkeyConfiguration>> GetAllHotkeysAsync()
+    {
+        var hotkeys = new Dictionary<string, HotkeyConfiguration>();
+
+        // Define default hotkeys
+        var defaultHotkeys = new[]
+        {
+            HotkeyConfiguration.CreateDefault("PlayPause", Key.P, ModifierKeys.Control | ModifierKeys.Shift, "Play/Pause"),
+            HotkeyConfiguration.CreateDefault("Stop", Key.S, ModifierKeys.Control | ModifierKeys.Shift, "Stop"),
+            HotkeyConfiguration.CreateDefault("NextStation", Key.Right, ModifierKeys.Control | ModifierKeys.Shift, "Next Station"),
+            HotkeyConfiguration.CreateDefault("PreviousStation", Key.Left, ModifierKeys.Control | ModifierKeys.Shift, "Previous Station"),
+            HotkeyConfiguration.CreateDefault("VolumeUp", Key.Up, ModifierKeys.Control | ModifierKeys.Shift, "Volume Up"),
+            HotkeyConfiguration.CreateDefault("VolumeDown", Key.Down, ModifierKeys.Control | ModifierKeys.Shift, "Volume Down"),
+            HotkeyConfiguration.CreateDefault("Mute", Key.M, ModifierKeys.Control | ModifierKeys.Shift, "Mute/Unmute")
+        };
+
+        // Load saved hotkeys or use defaults
+        foreach (var defaultHotkey in defaultHotkeys)
+        {
+            var savedHotkey = await GetHotkeyAsync(defaultHotkey.ActionId);
+            hotkeys[defaultHotkey.ActionId] = savedHotkey ?? defaultHotkey;
+        }
+
+        return hotkeys;
     }
 
     #endregion
