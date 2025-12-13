@@ -36,11 +36,15 @@ This document provides comprehensive guidance for AI assistants working with the
 - Content filtering - automatic filtering of Russian/Belarusian stations
 - Playback time tracking with visual display (HH:MM:SS)
 - Global hotkeys - system-wide keyboard shortcuts that work even when minimized
+- Column sorting - sortable station list columns
+- Station context menu - right-click actions for stations
+- Volume persistence - volume level saved between sessions
+- Favorite button in station list - quick favorite toggle per station
 
 ### Key Statistics
-- **Version**: 1.4
-- **Lines of Code**: ~7,900 lines
-- **Files**: 46 C# files, 7 XAML views
+- **Version**: 1.5
+- **Lines of Code**: ~10,000 lines
+- **Files**: 50 C# files, 8 XAML views
 - **Framework**: .NET 10 (WPF)
 - **Architecture**: MVVM with Dependency Injection
 - **Database**: SQLite with ADO.NET
@@ -135,6 +139,16 @@ Radio_Player/
     │   ├── RadioStationRepository.cs # SQLite database operations (ADO.NET)
     │   ├── IExportImportService.cs   # Backup/export service interface
     │   ├── ExportImportService.cs    # Backup/export implementation
+    │   ├── IGlobalHotkeyService.cs   # Global hotkey service interface
+    │   ├── GlobalHotkeyService.cs    # Global hotkey implementation
+    │   ├── ILanguageService.cs       # Language/translation service interface
+    │   ├── LanguageService.cs        # Language/translation implementation
+    │   ├── IStationCacheService.cs   # Station cache service interface
+    │   ├── StationCacheService.cs    # Station cache implementation
+    │   ├── IPlaylistParserService.cs # Playlist parser interface (PLS, M3U, M3U8)
+    │   ├── PlaylistParserService.cs  # Playlist parser implementation
+    │   ├── IStreamValidationService.cs # Stream validation interface
+    │   ├── StreamValidationService.cs  # Stream validation implementation
     │   └── DTOs/                     # Data transfer objects
     │       ├── RadioStationDto.cs    # Station DTO from API
     │       ├── CountryDto.cs         # Country DTO
@@ -150,7 +164,8 @@ Radio_Player/
     │   ├── OggContentDetector.cs     # OGG codec detection
     │   ├── OpusStreamDecoder.cs      # Opus decoder wrapper
     │   ├── PeekableStream.cs         # Stream wrapper for peeking
-    │   └── DebugLogger.cs            # Optional debug logging
+    │   ├── DebugLogger.cs            # Optional debug logging
+    │   └── TranslateExtension.cs     # XAML translation markup extension
     │
     ├── Converters/                    # XAML value converters
     │   └── ValueConverters.cs        # UI binding converters
@@ -210,6 +225,13 @@ private void ConfigureServices(IServiceCollection services)
     services.AddSingleton<IRadioBrowserService, RadioBrowserService>();
     services.AddSingleton<IRadioStationRepository, RadioStationRepository>();
     services.AddSingleton<IRadioPlayer, NAudioRadioPlayer>();
+    services.AddSingleton<IRadioRecorder, NAudioRadioRecorder>();
+    services.AddSingleton<IExportImportService, ExportImportService>();
+    services.AddSingleton<IGlobalHotkeyService, GlobalHotkeyService>();
+    services.AddSingleton<ILanguageService, LanguageService>();
+    services.AddSingleton<IStationCacheService, StationCacheService>();
+    services.AddSingleton<IPlaylistParserService, PlaylistParserService>();
+    services.AddSingleton<IStreamValidationService, StreamValidationService>();
 
     // Transients (new instance each time)
     services.AddTransient<MainViewModel>();
@@ -922,7 +944,161 @@ public interface IGlobalHotkeyService : IDisposable
 - Future enhancement could add settings dialog for custom hotkey assignment
 - Windows only - uses Windows API via NHotkey.Wpf
 
-### 11. Configuration (`AppConstants.cs`)
+### 11. Station Cache Service (`StationCacheService.cs`)
+
+**NEW in v1.5** - Background station cache management.
+
+**Overview:**
+The Station Cache Service manages automatic updates of the local station database from the Radio Browser API. It ensures the station list stays fresh while minimizing unnecessary API calls.
+
+**Interface:** `IStationCacheService`
+
+```csharp
+public interface IStationCacheService
+{
+    Task<int> UpdateCacheAsync(CancellationToken cancellationToken = default);
+    Task<bool> ShouldUpdateCacheAsync();
+    Task<TimeSpan?> GetCacheAgeAsync();
+    Task<bool> UpdateCacheIfNeededAsync(CancellationToken cancellationToken = default);
+    Task ClearCacheAsync();
+
+    event EventHandler? CacheUpdateStarted;
+    event EventHandler<int>? CacheUpdateCompleted;
+    event EventHandler<Exception>? CacheUpdateFailed;
+}
+```
+
+**Key Features:**
+- Automatic cache age checking
+- Configurable update intervals
+- Event-driven updates for UI feedback
+- Graceful error handling
+
+### 12. Playlist Parser Service (`PlaylistParserService.cs`)
+
+**NEW in v1.5** - Parse internet radio playlist files.
+
+**Overview:**
+The Playlist Parser Service handles parsing of common internet radio playlist formats, extracting stream URLs from playlist files.
+
+**Supported Formats:**
+- **PLS** - Shoutcast/Winamp playlist format
+- **M3U** - Standard playlist format
+- **M3U8** - Extended M3U (HLS) format
+
+**Interface:** `IPlaylistParserService`
+
+```csharp
+public interface IPlaylistParserService
+{
+    Task<PlaylistParseResult> ParsePlaylistAsync(string playlistUrl, CancellationToken cancellationToken = default);
+    bool IsPlaylistUrl(string url);
+}
+```
+
+**Use Cases:**
+- Auto-detect when station URL is a playlist
+- Extract actual stream URL from playlist
+- Support stations that only provide playlist links
+
+### 13. Stream Validation Service (`StreamValidationService.cs`)
+
+**NEW in v1.5** - Validate radio stream URLs before playback.
+
+**Overview:**
+The Stream Validation Service validates stream URLs and extracts metadata from ICY headers before playback starts.
+
+**Interface:** `IStreamValidationService`
+
+```csharp
+public interface IStreamValidationService
+{
+    Task<StreamValidationResult> ValidateStreamAsync(string streamUrl, CancellationToken cancellationToken = default);
+}
+
+public class StreamValidationResult
+{
+    bool IsValid { get; set; }
+    string? ErrorMessage { get; set; }
+    string? ContentType { get; set; }
+    string? Codec { get; set; }
+    int? Bitrate { get; set; }
+    string? StationName { get; set; }
+    string? Genre { get; set; }
+    string? ResolvedStreamUrl { get; set; }
+}
+```
+
+**Key Features:**
+- Pre-playback stream validation
+- Codec detection from content type
+- ICY metadata extraction (bitrate, name, genre)
+- Playlist resolution (follows redirects to actual stream)
+
+### 14. Column Sorting
+
+**NEW in v1.5** - Sortable station list columns.
+
+**Overview:**
+Users can now sort the station list by clicking on column headers. The sort order toggles between ascending and descending with each click.
+
+**Sortable Columns:**
+- Station name
+- Country
+- Codec
+- Bitrate
+- Votes
+
+**Implementation:**
+- Click column header to sort ascending
+- Click again to sort descending
+- Visual indicator shows current sort column and direction
+
+### 15. Station Context Menu
+
+**NEW in v1.5** - Right-click context menu for stations.
+
+**Overview:**
+Right-clicking on a station in the list shows a context menu with quick actions.
+
+**Menu Options:**
+- **Play** - Start playing the station
+- **Add to Favorites** / **Remove from Favorites** - Toggle favorite status
+- **Copy to My Stations** - Copy station to custom stations list
+- **View Details** - Open station details dialog
+
+**Implementation:**
+- Context menu bound to station list items
+- Actions use same commands as main UI
+- Menu items enabled/disabled based on context
+
+### 16. Volume Persistence
+
+**NEW in v1.5** - Volume level saved between sessions.
+
+**Overview:**
+The volume level is now persisted to the database and restored when the application starts.
+
+**Technical Details:**
+- Volume stored in Settings table
+- Loaded during app initialization
+- Saved when volume changes
+- Range: 0-100 (stored as integer)
+
+### 17. Favorite Button in Station List
+
+**NEW in v1.5** - Quick favorite toggle per station.
+
+**Overview:**
+Each station in the list now has a favorite button (heart icon) allowing quick toggle of favorite status without opening a menu.
+
+**Features:**
+- Heart icon next to station name
+- Filled heart = favorited, outline = not favorited
+- Click to toggle favorite status
+- Visual feedback on state change
+
+### 18. Configuration (`AppConstants.cs`)
 
 **Structure:**
 ```csharp
@@ -1046,6 +1222,46 @@ public static class AppConstants
     - [ ] Station navigation wraps around list
     - [ ] Volume changes respect min/max bounds (0-100%)
     - [ ] Mute preserves previous volume level
+
+12. **Column Sorting (v1.5)**
+    - [ ] Click column header sorts ascending
+    - [ ] Click again sorts descending
+    - [ ] Sort indicator shows on active column
+    - [ ] Name column sorting works
+    - [ ] Country column sorting works
+    - [ ] Codec column sorting works
+    - [ ] Bitrate column sorting works
+    - [ ] Votes column sorting works
+    - [ ] Sorting persists during search
+
+13. **Station Context Menu (v1.5)**
+    - [ ] Right-click shows context menu
+    - [ ] Play option works
+    - [ ] Add to Favorites option works
+    - [ ] Remove from Favorites option works (when favorited)
+    - [ ] Copy to My Stations option works
+    - [ ] View Details option opens dialog
+    - [ ] Menu items enable/disable appropriately
+
+14. **Volume Persistence (v1.5)**
+    - [ ] Volume level saved when changed
+    - [ ] Volume restored on app restart
+    - [ ] Volume persists across sessions
+    - [ ] Works with mute toggle
+
+15. **Favorite Button in List (v1.5)**
+    - [ ] Heart icon shows next to station name
+    - [ ] Filled heart for favorited stations
+    - [ ] Outline heart for non-favorited stations
+    - [ ] Click toggles favorite status
+    - [ ] Icon updates after toggle
+    - [ ] Works in all station views
+
+16. **Search Context (v1.5)**
+    - [ ] Search in Top Stations searches API
+    - [ ] Search in Favorites searches local favorites
+    - [ ] Search in Custom Stations searches custom stations
+    - [ ] Clear search returns to full list
 
 ### Recommended Test Stations
 
@@ -1529,7 +1745,13 @@ public static class AppConstants
 - **RadioStationRepository.cs** - Database operations
 - **RadioBrowserService.cs** - API integration
 - **ExportImportService.cs** - Backup/export operations (v1.2)
+- **GlobalHotkeyService.cs** - Global hotkey registration (v1.4)
+- **LanguageService.cs** - Translation management
+- **StationCacheService.cs** - Station cache management (v1.5)
+- **PlaylistParserService.cs** - Playlist parsing (v1.5)
+- **StreamValidationService.cs** - Stream URL validation (v1.5)
 - **MainViewModel.cs** - UI logic and commands
+- **MainWindow.xaml** - Main window UI layout
 - **lang/*.json** - Translation files for multi-language support (v1.2)
 
 ### Common Pitfalls to Avoid
@@ -1556,6 +1778,40 @@ public static class AppConstants
 ---
 
 ## Version History
+
+### Version 1.5 (2025-12-13)
+**New Features & Enhancements:**
+- **Column sorting** - Sortable station list columns
+  - Click column headers to sort ascending/descending
+  - Supports Name, Country, Codec, Bitrate, Votes columns
+  - Visual indicator shows current sort state
+- **Station context menu** - Right-click actions for stations
+  - Play, Add/Remove Favorite, Copy to My Stations, View Details
+  - Context-sensitive menu items
+- **Volume persistence** - Volume level saved between sessions
+  - Stored in Settings table
+  - Restored on application startup
+- **Favorite button in station list** - Quick favorite toggle
+  - Heart icon next to each station name
+  - One-click toggle without menus
+- **Search context awareness** - Search within current view
+  - Searches within Top Stations, Favorites, or Custom Stations as appropriate
+
+**New Services:**
+- `IStationCacheService` / `StationCacheService.cs` - Station cache management
+- `IPlaylistParserService` / `PlaylistParserService.cs` - PLS/M3U/M3U8 parsing
+- `IStreamValidationService` / `StreamValidationService.cs` - Stream URL validation
+
+**Modified Components:**
+- `MainViewModel.cs` - Added sorting, context menu commands, volume persistence
+- `MainWindow.xaml` - Added favorite buttons, context menu, sortable columns
+- `RadioStationRepository.cs` - Volume persistence methods
+
+**Statistics:**
+- Lines of Code: ~10,000 (up from ~7,900)
+- Total Files: 50 C# files, 8 XAML views (up from 46/7)
+- New features: 5+ enhancements
+- New services: 3 new service interfaces
 
 ### Version 1.4 (2025-12-02)
 **New Features & Enhancements:**
@@ -1634,8 +1890,8 @@ public static class AppConstants
 
 ---
 
-**Document Version:** 1.4
-**Last Updated:** 2025-12-02
+**Document Version:** 1.5
+**Last Updated:** 2025-12-13
 **Maintained By:** Radio Player Development Team
 
 For questions or clarifications, refer to the README.md or examine the source code directly.
