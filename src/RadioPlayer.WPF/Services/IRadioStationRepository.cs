@@ -43,6 +43,13 @@ public interface IRadioStationRepository
     Task<string?> GetSettingAsync(string key);
     Task SetSettingAsync(string key, string value);
 
+    // Hotkey settings
+    Task<HotkeyConfiguration?> GetHotkeyAsync(string actionId);
+    Task SetHotkeyAsync(HotkeyConfiguration hotkey);
+    Task<bool> GetHotkeysEnabledAsync();
+    Task SetHotkeysEnabledAsync(bool enabled);
+    Task<Dictionary<string, HotkeyConfiguration>> GetAllHotkeysAsync();
+
     // Station caching
     Task BulkAddOrUpdateStationsAsync(IEnumerable<RadioStation> stations);
     Task<List<RadioStation>> GetCachedStationsAsync(int limit = 100, bool excludeCustom = true);

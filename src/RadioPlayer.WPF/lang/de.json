@@ -95,6 +95,19 @@
       "English": "Englisch",
       "German": "Deutsch"
     },
+    "GlobalHotkeys": "Globale Tastenkombinationen",
+    "EnableGlobalHotkeys": "Globale Tastenkombinationen aktivieren",
+    "GlobalHotkeysDescription": "Systemweite Tastenkombinationen, die auch bei minimierter Anwendung funktionieren. Klicken Sie in ein Textfeld und drücken Sie Ihre gewünschte Tastenkombination.",
+    "Hotkeys": {
+      "PlayPause": "Wiedergabe/Pause",
+      "Stop": "Stopp",
+      "NextStation": "Nächster Sender",
+      "PreviousStation": "Vorheriger Sender",
+      "VolumeUp": "Lauter",
+      "VolumeDown": "Leiser",
+      "Mute": "Stummschalten/Laut"
+    },
+    "Reset": "Zurücksetzen",
     "BackupRestore": "Sicherung & Wiederherstellung",
     "BackupRestoreDescription": "Exportieren Sie Ihre Favoriten und Einstellungen in eine JSON-Datei oder importieren Sie aus einer vorherigen Sicherung.",
     "ExportBackup": "Sicherung exportieren",
@@ -236,6 +249,8 @@
     "CacheUpdateFailed": "Cache-Aktualisierung fehlgeschlagen: {0}",
     "LoadingCachedStations": "Zwischengespeicherte Sender werden geladen...",
     "LoadedCachedStations": "{0} zwischengespeicherte Sender geladen {1}",
-    "NoCachedStations": "Keine zwischengespeicherten Sender verfügbar"
+    "NoCachedStations": "Keine zwischengespeicherten Sender verfügbar",
+    "HotkeyRequiresModifier": "Bitte verwenden Sie mindestens eine Modifikatortaste (Strg, Alt, Umschalt oder Win)",
+    "InvalidHotkey": "Ungültige Tastenkombination"
   }
 }

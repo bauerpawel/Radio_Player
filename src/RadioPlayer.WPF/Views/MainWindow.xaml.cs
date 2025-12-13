@@ -18,14 +18,16 @@ public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel;
     private readonly IGlobalHotkeyService _hotkeyService;
+    private readonly IRadioStationRepository _repository;
     private Forms.NotifyIcon? _notifyIcon;
     private bool _isClosing = false;
 
-    public MainWindow(MainViewModel viewModel, IGlobalHotkeyService hotkeyService)
+    public MainWindow(MainViewModel viewModel, IGlobalHotkeyService hotkeyService, IRadioStationRepository repository)
     {
         InitializeComponent();
         _viewModel = viewModel;
         _hotkeyService = hotkeyService;
+        _repository = repository;
         DataContext = _viewModel;
 
         // Subscribe to property changes for station logo updates
@@ -193,63 +195,79 @@ public partial class MainWindow : Window
         }
     }
 
-    private void InitializeGlobalHotkeys()
+    private async void InitializeGlobalHotkeys()
     {
         try
         {
-            _hotkeyService.RegisterHotkeys(
-                onPlayPause: () => Dispatcher.Invoke(() =>
+            // Check if hotkeys are enabled
+            var hotkeysEnabled = await _repository.GetHotkeysEnabledAsync();
+            if (!hotkeysEnabled)
+            {
+                System.Diagnostics.Debug.WriteLine("[MainWindow] Global hotkeys are disabled");
+                return;
+            }
+
+            // Load hotkey configurations
+            var hotkeyConfigurations = await _repository.GetAllHotkeysAsync();
+
+            // Create callbacks dictionary
+            var callbacks = new System.Collections.Generic.Dictionary<string, Action>
+            {
+                ["PlayPause"] = () => Dispatcher.Invoke(() =>
                 {
                     if (_viewModel.TogglePlayPauseCommand.CanExecute(null))
                     {
                         _viewModel.TogglePlayPauseCommand.Execute(null);
                     }
                 }),
-                onStop: () => Dispatcher.Invoke(() =>
+                ["Stop"] = () => Dispatcher.Invoke(() =>
                 {
                     if (_viewModel.StopStationCommand.CanExecute(null))
                     {
                         _viewModel.StopStationCommand.Execute(null);
                     }
                 }),
-                onNextStation: () => Dispatcher.Invoke(() =>
+                ["NextStation"] = () => Dispatcher.Invoke(() =>
                 {
                     if (_viewModel.NextStationCommand.CanExecute(null))
                     {
                         _viewModel.NextStationCommand.Execute(null);
                     }
                 }),
-                onPreviousStation: () => Dispatcher.Invoke(() =>
+                ["PreviousStation"] = () => Dispatcher.Invoke(() =>
                 {
                     if (_viewModel.PreviousStationCommand.CanExecute(null))
                     {
                         _viewModel.PreviousStationCommand.Execute(null);
                     }
                 }),
-                onVolumeUp: () => Dispatcher.Invoke(() =>
+                ["VolumeUp"] = () => Dispatcher.Invoke(() =>
                 {
                     if (_viewModel.VolumeUpCommand.CanExecute(null))
                     {
                         _viewModel.VolumeUpCommand.Execute(null);
                     }
                 }),
-                onVolumeDown: () => Dispatcher.Invoke(() =>
+                ["VolumeDown"] = () => Dispatcher.Invoke(() =>
                 {
                     if (_viewModel.VolumeDownCommand.CanExecute(null))
                     {
                         _viewModel.VolumeDownCommand.Execute(null);
                     }
                 }),
-                onMute: () => Dispatcher.Invoke(() =>
+                ["Mute"] = () => Dispatcher.Invoke(() =>
                 {
                     if (_viewModel.ToggleMuteCommand.CanExecute(null))
                     {
                         _viewModel.ToggleMuteCommand.Execute(null);
                     }
                 })
-            );
+            };
 
-            System.Diagnostics.Debug.WriteLine("[MainWindow] Global hotkeys registered successfully");
+            // Register hotkeys with custom configurations
+            _hotkeyService.RegisterHotkeysWithConfigurations(hotkeyConfigurations, callbacks);
+
+            System.Diagnostics.Debug.WriteLine("[MainWindow] Global hotkeys registered successfully with custom configurations");
         }
         catch (Exception ex)
         {

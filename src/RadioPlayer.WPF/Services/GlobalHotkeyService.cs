@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Windows.Input;
 using NHotkey;
 using NHotkey.Wpf;
+using RadioPlayer.WPF.Models;
 
 namespace RadioPlayer.WPF.Services;
 
@@ -127,6 +129,72 @@ public class GlobalHotkeyService : IGlobalHotkeyService
             System.Diagnostics.Debug.WriteLine($"[GlobalHotkeyService] Hotkey already registered: {ex.Message}");
             // Some hotkey is already registered by another application
             // We'll continue anyway - the other hotkeys might still work
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[GlobalHotkeyService] Failed to register hotkeys: {ex.Message}");
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public void RegisterHotkeysWithConfigurations(
+        Dictionary<string, HotkeyConfiguration> hotkeyConfigurations,
+        Dictionary<string, Action> callbacks)
+    {
+        if (_areHotkeysRegistered)
+        {
+            UnregisterHotkeys();
+        }
+
+        try
+        {
+            foreach (var (actionId, config) in hotkeyConfigurations)
+            {
+                // Skip disabled hotkeys
+                if (!config.IsEnabled)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[GlobalHotkeyService] Skipping disabled hotkey: {actionId}");
+                    continue;
+                }
+
+                // Get callback for this action
+                if (!callbacks.TryGetValue(actionId, out var callback))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[GlobalHotkeyService] No callback for action: {actionId}");
+                    continue;
+                }
+
+                var hotkeyName = $"RadioPlayer_{actionId}";
+
+                try
+                {
+                    HotkeyManager.Current.AddOrReplace(
+                        hotkeyName,
+                        config.Key,
+                        config.Modifiers,
+                        (sender, e) =>
+                        {
+                            callback?.Invoke();
+                            e.Handled = true;
+                        });
+
+                    System.Diagnostics.Debug.WriteLine($"[GlobalHotkeyService] Registered hotkey: {actionId} = {config.HotkeyString}");
+                }
+                catch (HotkeyAlreadyRegisteredException ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[GlobalHotkeyService] Hotkey already registered for {actionId}: {ex.Message}");
+                    // Continue with other hotkeys
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[GlobalHotkeyService] Failed to register hotkey {actionId}: {ex.Message}");
+                    // Continue with other hotkeys
+                }
+            }
+
+            _areHotkeysRegistered = true;
+            System.Diagnostics.Debug.WriteLine("[GlobalHotkeyService] All configured hotkeys registered");
         }
         catch (Exception ex)
         {

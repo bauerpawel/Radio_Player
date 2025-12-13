@@ -56,3 +56,26 @@ CREATE TABLE IF NOT EXISTS ListeningHistory (
 CREATE INDEX IF NOT EXISTS idx_history_station ON ListeningHistory(StationId);
 CREATE INDEX IF NOT EXISTS idx_history_date ON ListeningHistory(DateRecorded);
 CREATE INDEX IF NOT EXISTS idx_history_start ON ListeningHistory(StartTime);
+
+-- Settings table for application preferences
+-- Keys used:
+--   - DebugLogging: Boolean (true/false)
+--   - MinimizeToTray: Boolean (true/false)
+--   - BufferDuration: Integer (seconds)
+--   - PreBufferDuration: Integer (seconds)
+--   - Language: String (language code: pl, en, de)
+--   - Volume: Integer (0-100)
+--   - LastCacheUpdate: DateTime (ISO 8601)
+--   - HotkeysEnabled: Boolean (true/false)
+--   - Hotkey_PlayPause: String (serialized HotkeyConfiguration)
+--   - Hotkey_Stop: String (serialized HotkeyConfiguration)
+--   - Hotkey_NextStation: String (serialized HotkeyConfiguration)
+--   - Hotkey_PreviousStation: String (serialized HotkeyConfiguration)
+--   - Hotkey_VolumeUp: String (serialized HotkeyConfiguration)
+--   - Hotkey_VolumeDown: String (serialized HotkeyConfiguration)
+--   - Hotkey_Mute: String (serialized HotkeyConfiguration)
+CREATE TABLE IF NOT EXISTS Settings (
+    Key TEXT PRIMARY KEY NOT NULL,
+    Value TEXT NOT NULL,
+    DateModified TEXT DEFAULT CURRENT_TIMESTAMP
+);

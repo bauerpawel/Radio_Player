@@ -960,7 +960,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void OpenSettings()
     {
-        var settingsDialog = new Views.SettingsDialog(_languageService, _exportImportService);
+        var settingsDialog = new Views.SettingsDialog(_languageService, _exportImportService, _repository);
         settingsDialog.ShowDialog();
     }
 
